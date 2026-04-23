@@ -8,15 +8,15 @@ export default function Home() {
   return (
     <div className="min-h-screen flex">
 
-      {/* LEFT SIDE */}
+      // left side
       <div className="w-1/2 bg-gray-100 flex flex-col justify-between">
 
-        {/* HEADER LEFT */}
+        // header left
         <div className="p-6">
           <h1 className="font-semibold text-lg">CerberDoc</h1>
         </div>
 
-        {/* LOGO */}
+        //logo
         <div className="flex justify-center items-center flex-1">
           <img
             src="/logo.svg"
@@ -25,24 +25,24 @@ export default function Home() {
           />
         </div>
 
-        {/* FOOTER LEFT */}
+        // footer left
         <div className="p-6 text-sm text-gray-500">
           "Project carried out as part of an engineering thesis."
         </div>
 
       </div>
 
-      {/* RIGHT SIDE */}
+      // right side
       <div className="w-1/2 bg-white flex flex-col justify-between">
 
-        {/* HEADER RIGHT */}
+        // header right
         <div className="p-6 flex justify-end">
           <a href="#" className="text-sm underline">
             Contact us
           </a>
         </div>
 
-        {/* FORM */}
+        // form
         <div className="flex justify-center items-center flex-1">
 
           <Card className="w-[400px] min-h-[520px] border border-gray-200 shadow-none ring-0 bg-white">
@@ -102,7 +102,7 @@ export default function Home() {
 
         </div>
 
-        {/* FOOTER RIGHT (pusty dla symetrii) */}
+        //footer right
         <div className="p-6" />
 
       </div>
