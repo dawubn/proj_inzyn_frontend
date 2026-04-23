@@ -1,4 +1,4 @@
-# DocuScope Frontend
+# CerberDoc Frontend
 
 Frontend application for document completeness analysis system using OCR and formal validation.
 
