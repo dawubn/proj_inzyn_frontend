@@ -8,15 +8,15 @@ export default function Home() {
   return (
     <div className="min-h-screen flex">
 
-      // left side
+      {/* left side */}
       <div className="w-1/2 bg-gray-100 flex flex-col justify-between">
 
-        // header left
+        {/* header left */}
         <div className="p-6">
           <h1 className="font-semibold text-lg">CerberDoc</h1>
         </div>
 
-        //logo
+        {/* logo */}
         <div className="flex justify-center items-center flex-1">
           <img
             src="/logo.svg"
@@ -25,24 +25,24 @@ export default function Home() {
           />
         </div>
 
-        // footer left
+        {/*footer left*/}
         <div className="p-6 text-sm text-gray-500">
           "Project carried out as part of an engineering thesis."
         </div>
 
       </div>
 
-      // right side
+      {/* right side */}
       <div className="w-1/2 bg-white flex flex-col justify-between">
 
-        // header right
+        {/* header right */}
         <div className="p-6 flex justify-end">
           <a href="#" className="text-sm underline">
             Contact us
           </a>
         </div>
 
-        // form
+        {/* form */}
         <div className="flex justify-center items-center flex-1">
 
           <Card className="w-[400px] min-h-[520px] border border-gray-200 shadow-none ring-0 bg-white">
@@ -102,7 +102,7 @@ export default function Home() {
 
         </div>
 
-        //footer right
+        {/*footer right*/}
         <div className="p-6" />
 
       </div>
