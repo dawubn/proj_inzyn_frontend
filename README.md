@@ -1,10 +1,10 @@
-# DocuScope Frontend
+# CerberDoc Frontend
 
 Frontend application for document completeness analysis system using OCR and formal validation.
 
 ## Stack
 
-- React 18 + TypeScript — UI & type safety  
+- React 19 + TypeScript — UI & type safety  
 - Vite — fast build tool & dev server  
 - Tailwind CSS — styling  
 - shadcn/ui (Radix) — UI components  
