@@ -44,7 +44,7 @@ export default function Home() {
       login(loginResponse.access_token, loginResponse.refresh_token);
 
       navigate("/dashboard");
-    } catch (err) {
+    } catch {
       setError("Registration failed");
     } finally {
       setLoading(false);

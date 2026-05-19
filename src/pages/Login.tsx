@@ -31,7 +31,7 @@ export default function Login() {
       login(response.access_token, response.refresh_token);
 
       navigate("/dashboard");
-    } catch (err) {
+    } catch {
       setError("Invalid email or password");
     } finally {
       setLoading(false);
