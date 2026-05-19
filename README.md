@@ -197,3 +197,4 @@ const API_URL = import.meta.env.VITE_API_URL;
 - Project follows a modular structure (`features/`)
 - API layer is separated (`api/`)
 - Ready for integration with backend (FastAPI)
+
