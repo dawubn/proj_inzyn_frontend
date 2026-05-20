@@ -17,7 +17,7 @@ Frontend application for document completeness analysis system using OCR and for
 
 ### 1. Prerequisites
 
-- Node.js (>= 20)
+- Node.js 24
 - npm / pnpm / yarn
 - Git
 
