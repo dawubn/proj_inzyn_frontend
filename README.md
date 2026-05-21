@@ -54,11 +54,75 @@ http://localhost:5173
 ## Available Scripts
 
 ```bash
-npm run dev        # start dev server
-npm run build      # production build
-npm run preview    # preview build locally
-npm run lint       # run linter
+npm run dev           # start dev server
+npm run build         # production build (TS + Vite)
+npm run preview       # preview build locally
+npm run lint          # run ESLint (TS + React)
+npm run typecheck     # run TypeScript type checker
+npm run format        # auto-format code with Prettier
+npm run format:check  # check formatting (used in CI/pre-commit)
 ```
+
+---
+
+## Code Quality
+
+Frontend uses a unified toolchain for code quality:
+
+- **ESLint** – static analysis for TypeScript + React (configured in `eslint.config.js`).
+- **TypeScript** – type checking via `tsconfig.json`.
+- **Prettier** – automatic code formatting (`prettier.config.cjs`).
+
+### Manual checks
+
+From the project root:
+
+```bash
+npm run lint          # lints the codebase
+npm run typecheck     # runs TypeScript type checker
+npm run format        # formats source files with Prettier
+npm run format:check  # verifies formatting without modifying files
+```
+
+---
+
+## Git Hooks (pre-commit)
+
+The project uses **pre-commit** to run code quality checks automatically on each commit (configured in `.pre-commit-config.yaml`).[file:1]
+
+### One-time setup (per developer)
+
+From the project root:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit install --hook-type commit-msg
+```
+
+### What runs on `git commit`
+
+On every commit, the following checks are executed:
+
+- basic checks (trailing whitespace, end-of-file, merge conflicts)
+- `npm run lint`
+- `npm run typecheck`
+- `npm run format:check`
+- commit message validation (`commit-msg` hook)
+
+If any step fails, the commit is rejected until the issues are fixed.
+
+---
+
+## CI (GitHub Actions)
+
+Continuous Integration is configured in `.github/workflows/CI.yml` (job **Frontend CI**). The `lint` job runs the same tools as local development
+
+- `npm run lint`
+- `npm run typecheck`
+- `npm run format:check`
+
+This ensures consistent code quality checks both locally and in CI.
 
 ---
 
@@ -86,7 +150,7 @@ src/
 - Display OCR results
 - Basic document analysis
 - Generate analysis report
-- Prepare for validation rules system
+- Prepared for validation rules system
 - Multi-language support (PL / EN)
 
 ---
@@ -97,8 +161,8 @@ Frontend communicates with backend via REST API.
 
 Example endpoints:
 
-- POST /upload — upload document
-- GET /result — get analysis result
+- `POST /upload` — upload document
+- `GET /result` — get analysis result
 
 ---
 
@@ -161,16 +225,12 @@ Project uses Vite environment variables.
 - `.env` file is local only
 - `.env.example` is committed
 
----
-
 ### Example `.env.example`
 
 ```env
 VITE_API_URL=http://localhost:8000
 VITE_APP_ENV=development
 ```
-
----
 
 ### Usage in code
 
@@ -183,8 +243,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 ## Development Notes
 
 - UI components are based on shadcn/ui
-- Project follows modular structure (features/)
-- API layer is separated (api/)
+- Project follows a modular structure (`features/`)
+- API layer is separated (`api/`)
 - Ready for integration with backend (FastAPI)
 
 ----
