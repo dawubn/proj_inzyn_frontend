@@ -187,4 +187,4 @@ const API_URL = import.meta.env.VITE_API_URL;
 - API layer is separated (api/)
 - Ready for integration with backend (FastAPI)
 
----
+----
