@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend-lint
+        entry: bash -c "cd frontend && npm run lint"
+        language: system
+        pass_filenames: false
+
+      - id: frontend-typecheck
+        name: frontend-typecheck
+        entry: bash -c "cd frontend && npm run typecheck"
+        language: system
+        pass_filenames: false
+
+      - id: frontend-format-check
+        name: frontend-format-check
+        entry: bash -c "cd frontend && npm run format:check"
+        language: system
+        pass_filenames: false
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.30.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
