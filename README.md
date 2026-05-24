@@ -17,7 +17,7 @@ Frontend application for document completeness analysis system using OCR and for
 
 ### 1. Prerequisites
 
-- Node.js (>= 20)
+- Node.js 24
 - npm / pnpm / yarn
 - Git
 
@@ -139,6 +139,7 @@ src/
 ├── lib/               # utilities & helpers
 ├── locales/           # translations (PL / EN)
 ├── types/             # TypeScript types
+├── context/           # Auth context
 ```
 
 ---
@@ -164,6 +165,54 @@ Example endpoints:
 - `GET /result` — get analysis result
 
 ---
+
+## Git Workflow
+
+Pracujemy w modelu: **`main` = tylko stabilny kod**. Każda zmiana idzie przez osobny branch i Pull Request.
+
+### 1. Zaktualizuj main lokalnie
+
+Zanim zaczniesz nową funkcję:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+### 2. Stwórz branch od main
+
+Wzór nazwy: `typ/jira_task/opis-zadania`
+
+| Typ       | Przykład                    |
+| --------- | --------------------------- |
+| `feature` | `feature/PP-1/auth-ui`      |
+| `fix`     | `fix/PP-3/login-validation` |
+| `chore`   | `chore/PP-4/setup-i18n`     |
+
+```bash
+git checkout -b feature/PP-1/auth-ui
+```
+
+### 3. Commituj zmiany
+
+Commity zgodne z **Conventional Commits**. Wzór: `typ:JIRA_TASK: opis`
+
+```bash
+git add .
+git commit -m "feat:PP-1: add language switch"
+```
+
+Dostępne typy: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`, `perf`
+
+### 4. Wypchnij branch na GitHuba
+
+```bash
+git push -u origin feature/PP-1/auth-ui
+```
+
+### 5. Otwórz Pull Request
+
+Na GitHubie otwórz PR z brancha do `main`. PR wymaga review przed mergem.
 
 ## Environment Variables
 
@@ -198,3 +247,4 @@ const API_URL = import.meta.env.VITE_API_URL;
 - API layer is separated (`api/`)
 - Ready for integration with backend (FastAPI)
 
+----
