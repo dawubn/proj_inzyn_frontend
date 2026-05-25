@@ -11,10 +11,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+
+        {/* opcjonalnie zostawiasz testówkę */}
+        <Route path="/test" element={<h1>TEST</h1>} />
 
         {/* protected routes with layout */}
         <Route
@@ -48,10 +50,13 @@ function App() {
 
           <Route
             path="/history/analysis-details"
-            element={<div>Analysis Details - temporary for breadcrumbs testing</div>}
-          />  
+            element={
+              <div>
+                Analysis Details - temporary for breadcrumbs testing
+              </div>
+            }
+          />
         </Route>
-
       </Routes>
     </BrowserRouter>
   );
