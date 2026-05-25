@@ -16,6 +16,9 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
 
+        {/* opcjonalnie zostawiasz testówkę */}
+        <Route path="/test" element={<h1>TEST</h1>} />
+
         {/* protected routes with layout */}
         <Route
           element={
@@ -26,18 +29,32 @@ function App() {
         >
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/history" element={<div>History of analysis</div>} />
+          <Route
+            path="/history"
+            element={<div>History of analysis</div>}
+          />
 
-          <Route path="/document-analysis" element={<DocumentAnalysis />} />
+          <Route
+            path="/document-analysis"
+            element={<DocumentAnalysis />}
+          />
 
-          <Route path="/rule-profiles" element={<div>Rule profiles</div>} />
+          <Route
+            path="/rule-profiles"
+            element={<div>Rule profiles</div>}
+          />
 
-          <Route path="/account-details" element={<div>Account details</div>} />
+          <Route
+            path="/account-details"
+            element={<div>Account details</div>}
+          />
 
           <Route
             path="/history/analysis-details"
             element={
-              <div>Analysis Details - temporary for breadcrumbs testing</div>
+              <div>
+                Analysis Details - temporary for breadcrumbs testing
+              </div>
             }
           />
         </Route>
