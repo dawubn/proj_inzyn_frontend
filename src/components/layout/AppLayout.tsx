@@ -1,16 +1,10 @@
-import { getMe } from "@/api/auth";
-import { useState, useEffect } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
+import { getMe } from '@/api/auth';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 import {
   ChevronDown,
   ChevronRight,
@@ -21,33 +15,33 @@ import {
   Settings,
   User,
   LogOut,
-} from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 const menuItems = [
   {
-    label: "Dashboard",
-    path: "/dashboard",
+    label: 'Dashboard',
+    path: '/dashboard',
     icon: LayoutDashboard,
   },
   {
-    label: "History of analysis",
-    path: "/history",
+    label: 'History of analysis',
+    path: '/history',
     icon: History,
   },
   {
-    label: "Document Analysis",
-    path: "/document-analysis",
+    label: 'Document Analysis',
+    path: '/document-analysis',
     icon: FileText,
   },
   {
-    label: "Rule profiles",
-    path: "/rule-profiles",
+    label: 'Rule profiles',
+    path: '/rule-profiles',
     icon: Settings,
   },
   {
-    label: "Account details",
-    path: "/account-details",
+    label: 'Account details',
+    path: '/account-details',
     icon: User,
   },
 ];
@@ -58,39 +52,37 @@ type Breadcrumb = {
 };
 
 const breadcrumbMap: Record<string, Breadcrumb[]> = {
-  "/dashboard": [{ label: "Dashboard", path: "/dashboard" }],
+  '/dashboard': [{ label: 'Dashboard', path: '/dashboard' }],
 
-  "/history": [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "History of analysis", path: "/history" },
+  '/history': [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'History of analysis', path: '/history' },
   ],
 
-  "/history/analysis-details": [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "History of analysis", path: "/history" },
-    { label: "Analysis details", path: "/history/analysis-details" },
+  '/history/analysis-details': [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'History of analysis', path: '/history' },
+    { label: 'Analysis details', path: '/history/analysis-details' },
   ],
 
-  "/document-analysis": [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "Document Analysis", path: "/document-analysis" },
+  '/document-analysis': [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Document Analysis', path: '/document-analysis' },
   ],
 
-  "/rule-profiles": [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "Rule profiles", path: "/rule-profiles" },
+  '/rule-profiles': [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Rule profiles', path: '/rule-profiles' },
   ],
 
-  "/account-details": [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "Account details", path: "/account-details" },
+  '/account-details': [
+    { label: 'Dashboard', path: '/dashboard' },
+    { label: 'Account details', path: '/account-details' },
   ],
 };
 
 function getBreadcrumbs(pathname: string) {
-  return (
-    breadcrumbMap[pathname] ?? [{ label: "Dashboard", path: "/dashboard" }]
-  );
+  return breadcrumbMap[pathname] ?? [{ label: 'Dashboard', path: '/dashboard' }];
 }
 
 export default function AppLayout() {
@@ -98,13 +90,13 @@ export default function AppLayout() {
   const location = useLocation();
   const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [userEmail, setUserEmail] = useState('');
 
   const breadcrumbs = getBreadcrumbs(location.pathname);
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate('/login');
   };
 
   useEffect(() => {
@@ -121,26 +113,24 @@ export default function AppLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0 lg:overflow-hidden">
       {/* top section */}
-      <header className="flex items-start justify-between px-8 py-6">
+      <header className="flex shrink-0 items-start justify-between px-8 py-6">
         <div>
           <h1
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate('/dashboard')}
             className="cursor-pointer text-lg font-semibold transition-opacity hover:opacity-70"
           >
             CerberDoc
           </h1>
 
-          <div className="mt-4 flex items-center gap-3 text-sm text-gray-500">
+          <div className="-ml-2 mt-10 flex items-center gap-1 text-xs text-gray-500 sm:ml-0 sm:mt-4 sm:gap-3 sm:text-sm">
             {breadcrumbs.length > 1 && (
               <button
-                onClick={() =>
-                  navigate(breadcrumbs[breadcrumbs.length - 2].path)
-                }
+                onClick={() => navigate(breadcrumbs[breadcrumbs.length - 2].path)}
                 className="cursor-pointer text-gray-700 hover:text-black"
               >
-                <ArrowLeft size={18} />
+                <ArrowLeft className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" />
               </button>
             )}
 
@@ -148,7 +138,7 @@ export default function AppLayout() {
               const isLast = index === breadcrumbs.length - 1;
 
               return (
-                <div key={breadcrumb.path} className="flex items-center gap-3">
+                <div key={breadcrumb.path} className="flex items-center gap-1 sm:gap-3">
                   <span
                     onClick={() => {
                       if (!isLast) {
@@ -156,15 +146,13 @@ export default function AppLayout() {
                       }
                     }}
                     className={
-                      isLast
-                        ? "font-medium text-gray-900"
-                        : "cursor-pointer hover:text-black"
+                      isLast ? 'font-medium text-gray-900' : 'cursor-pointer hover:text-black'
                     }
                   >
                     {breadcrumb.label}
                   </span>
 
-                  {!isLast && <ChevronRight size={14} />}
+                  {!isLast && <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
                 </div>
               );
             })}
@@ -187,7 +175,7 @@ export default function AppLayout() {
 
           <SheetContent
             side="right"
-            className="w-[280px] px-6 py-6 [&>button]:cursor-pointer"
+            className="w-[280px] border-l border-[#E5E5E5] bg-[#F5F5F5]/80 px-6 py-6 backdrop-blur-md [&>button]:cursor-pointer"
           >
             <SheetHeader>
               <SheetTitle className="sr-only">Navigation</SheetTitle>
@@ -226,8 +214,8 @@ export default function AppLayout() {
                         }}
                         className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                           isActive
-                            ? "bg-gray-100 text-black"
-                            : "text-gray-600 hover:bg-gray-50 hover:text-black"
+                            ? 'bg-gray-100 text-black'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-black'
                         }`}
                       >
                         <Icon size={16} />
@@ -239,19 +227,17 @@ export default function AppLayout() {
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-semibold text-gray-500">
-                  Account
-                </p>
+                <p className="mb-2 text-xs font-semibold text-gray-500">Account</p>
 
                 <button
                   onClick={() => {
-                    navigate("/account-details");
+                    navigate('/account-details');
                     setIsSidebarOpen(false);
                   }}
                   className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                    location.pathname === "/account-details"
-                      ? "bg-gray-100 text-black"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-black"
+                    location.pathname === '/account-details'
+                      ? 'bg-gray-100 text-black'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-black'
                   }`}
                 >
                   <User size={16} />
@@ -274,8 +260,8 @@ export default function AppLayout() {
       </header>
 
       {/* main content */}
-      <main className="px-8 pb-8">
-        <div className="min-h-[calc(100vh-140px)] rounded-sm bg-white">
+      <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-auto">
+        <div className="rounded-sm bg-white lg:h-full">
           <Outlet />
         </div>
       </main>
