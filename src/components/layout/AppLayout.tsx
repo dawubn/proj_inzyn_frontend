@@ -1,10 +1,6 @@
-import { getMe } from '@/api/auth';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Separator } from '@/components/ui/separator';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
   ChevronRight,
@@ -16,8 +12,13 @@ import {
   User,
   LogOut,
 } from 'lucide-react';
+
+import { getMe } from '@/api/auth';
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
 
 const menuItems = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -61,9 +62,16 @@ function getBreadcrumbs(pathname: string) {
   return breadcrumbMap[pathname] ?? [{ label: 'Dashboard', path: '/dashboard' }];
 }
 
+type MenuButtonProps = {
+  label: string;
+  path: string;
+  icon: React.ElementType;
+};
+
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -75,19 +83,13 @@ export default function AppLayout() {
   });
 
   function handleLogout() {
+    queryClient.removeQueries({ queryKey: ['me'] });
     logout();
+    setIsSidebarOpen(false);
     navigate('/', { replace: true });
   }
 
-  function renderMenuButton({
-    label,
-    path,
-    icon: Icon,
-  }: {
-    label: string;
-    path: string;
-    icon: React.ElementType;
-  }) {
+  function renderMenuButton({ label, path, icon: Icon }: MenuButtonProps) {
     const isActive = location.pathname === path;
 
     return (
@@ -135,7 +137,9 @@ export default function AppLayout() {
                 <div key={breadcrumb.path} className="flex items-center gap-1 sm:gap-3">
                   <span
                     onClick={() => {
-                      if (!isLast) navigate(breadcrumb.path);
+                      if (!isLast) {
+                        navigate(breadcrumb.path);
+                      }
                     }}
                     className={
                       isLast ? 'font-medium text-gray-900' : 'cursor-pointer hover:text-black'
