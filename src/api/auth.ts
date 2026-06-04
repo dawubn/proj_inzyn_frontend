@@ -1,4 +1,12 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL as string;
+
+if (!API_URL) {
+  throw new Error('Missing VITE_API_URL');
+}
+
+const ACCESS_TOKEN_KEY = 'access_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
+const LOGIN_ROUTE = '/';
 
 export interface LoginPayload {
   email: string;
@@ -11,22 +19,6 @@ export interface LoginResponse {
   token_type: string;
 }
 
-export async function loginUser(data: LoginPayload): Promise<LoginResponse> {
-  const response = await fetch(`${API_URL}/api/v1/auth/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error("Invalid email or password");
-  }
-
-  return response.json();
-}
-
 export interface RegisterPayload {
   email: string;
   password: string;
@@ -34,67 +26,26 @@ export interface RegisterPayload {
   role: string;
 }
 
-export async function registerUser(data: RegisterPayload) {
-  const response = await fetch(`${API_URL}/api/v1/auth/register`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    throw new Error("Registration failed");
-  }
-
-  return response.json();
+export interface RegisterResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MeResponse {
   created_at: string;
   updated_at: string;
-
   id: string;
   email: string;
   full_name: string;
-
   role: string;
-
   is_active: boolean;
   is_verified: boolean;
-}
-
-export async function getMe(): Promise<MeResponse> {
-  let token = localStorage.getItem("access_token");
-
-  let response = await fetch(`${API_URL}/api/v1/users/me`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (response.status === 401) {
-    token = await refreshAccessToken();
-
-    response = await fetch(`${API_URL}/api/v1/users/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  }
-
-  if (response.status === 401) {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    window.location.href = "/login";
-    throw new Error("Session expired");
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch user");
-  }
-
-  return response.json();
 }
 
 export interface RefreshResponse {
@@ -103,13 +54,141 @@ export interface RefreshResponse {
   token_type: string;
 }
 
+function getAccessToken() {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+function setTokens(accessToken: string, refreshToken?: string) {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
+}
+
+function clearTokens() {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+function redirectToLogin() {
+  window.location.replace(LOGIN_ROUTE);
+}
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  return response.json() as Promise<T>;
+}
+
+async function extractErrorMessage(response: Response, fallbackMessage: string) {
+  try {
+    const data = await response.json();
+    if (typeof data?.detail === 'string') return data.detail;
+    if (typeof data?.message === 'string') return data.message;
+    return fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
+
+async function authorizedFetch(input: string, init: RequestInit = {}, retry = true) {
+  const token = getAccessToken();
+
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      ...(init.headers ?? {}),
+      Authorization: token ? `Bearer ${token}` : '',
+    },
+  });
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  if (!retry) {
+    clearTokens();
+    redirectToLogin();
+    throw new Error('Session expired');
+  }
+
+  try {
+    const newAccessToken = await refreshAccessToken();
+
+    return fetch(input, {
+      ...init,
+      headers: {
+        ...(init.headers ?? {}),
+        Authorization: `Bearer ${newAccessToken}`,
+      },
+    });
+  } catch {
+    clearTokens();
+    redirectToLogin();
+    throw new Error('Session expired');
+  }
+}
+
+export async function loginUser(data: LoginPayload): Promise<LoginResponse> {
+  const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response, 'Invalid email or password'));
+  }
+
+  const result = await parseJsonResponse<LoginResponse>(response);
+  setTokens(result.access_token, result.refresh_token);
+  return result;
+}
+
+export async function registerUser(data: RegisterPayload): Promise<RegisterResponse> {
+  const response = await fetch(`${API_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response, 'Registration failed'));
+  }
+
+  return parseJsonResponse<RegisterResponse>(response);
+}
+
+export async function getMe(): Promise<MeResponse> {
+  const response = await authorizedFetch(`${API_URL}/api/v1/users/me`);
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response, 'Failed to fetch user'));
+  }
+
+  return parseJsonResponse<MeResponse>(response);
+}
+
 export async function refreshAccessToken(): Promise<string> {
-  const refreshToken = localStorage.getItem("refresh_token");
+  const refreshToken = getRefreshToken();
+
+  if (!refreshToken) {
+    clearTokens();
+    redirectToLogin();
+    throw new Error('Missing refresh token');
+  }
 
   const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       refresh_token: refreshToken,
@@ -117,19 +196,18 @@ export async function refreshAccessToken(): Promise<string> {
   });
 
   if (!response.ok) {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    window.location.href = "/login";
-    throw new Error("Session expired");
+    clearTokens();
+    redirectToLogin();
+    throw new Error('Session expired');
   }
 
-  const data: RefreshResponse = await response.json();
-
-  localStorage.setItem("access_token", data.access_token);
-
-  if (data.refresh_token) {
-    localStorage.setItem("refresh_token", data.refresh_token);
-  }
+  const data = await parseJsonResponse<RefreshResponse>(response);
+  setTokens(data.access_token, data.refresh_token);
 
   return data.access_token;
+}
+
+export function logoutUser() {
+  clearTokens();
+  redirectToLogin();
 }

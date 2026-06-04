@@ -1,5 +1,5 @@
 import { getMe } from '@/api/auth';
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -17,33 +17,14 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
 
 const menuItems = [
-  {
-    label: 'Dashboard',
-    path: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    label: 'History of analysis',
-    path: '/history',
-    icon: History,
-  },
-  {
-    label: 'Document Analysis',
-    path: '/document-analysis',
-    icon: FileText,
-  },
-  {
-    label: 'Rule profiles',
-    path: '/rule-profiles',
-    icon: Settings,
-  },
-  {
-    label: 'Account details',
-    path: '/account-details',
-    icon: User,
-  },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { label: 'History of analysis', path: '/history', icon: History },
+  { label: 'Document Analysis', path: '/document-analysis', icon: FileText },
+  { label: 'Rule profiles', path: '/rule-profiles', icon: Settings },
+  { label: 'Account details', path: '/account-details', icon: User },
 ];
 
 type Breadcrumb = {
@@ -53,28 +34,23 @@ type Breadcrumb = {
 
 const breadcrumbMap: Record<string, Breadcrumb[]> = {
   '/dashboard': [{ label: 'Dashboard', path: '/dashboard' }],
-
   '/history': [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'History of analysis', path: '/history' },
   ],
-
   '/history/analysis-details': [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'History of analysis', path: '/history' },
     { label: 'Analysis details', path: '/history/analysis-details' },
   ],
-
   '/document-analysis': [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'Document Analysis', path: '/document-analysis' },
   ],
-
   '/rule-profiles': [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'Rule profiles', path: '/rule-profiles' },
   ],
-
   '/account-details': [
     { label: 'Dashboard', path: '/dashboard' },
     { label: 'Account details', path: '/account-details' },
@@ -90,31 +66,49 @@ export default function AppLayout() {
   const location = useLocation();
   const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
 
   const breadcrumbs = getBreadcrumbs(location.pathname);
 
-  const handleLogout = () => {
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: getMe,
+  });
+
+  function handleLogout() {
     logout();
-    navigate('/login');
-  };
+    navigate('/', { replace: true });
+  }
 
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const user = await getMe();
-        setUserEmail(user.email);
-      } catch (error) {
-        console.error(error);
-      }
-    }
+  function renderMenuButton({
+    label,
+    path,
+    icon: Icon,
+  }: {
+    label: string;
+    path: string;
+    icon: React.ElementType;
+  }) {
+    const isActive = location.pathname === path;
 
-    fetchUser();
-  }, []);
+    return (
+      <button
+        key={path}
+        onClick={() => {
+          navigate(path);
+          setIsSidebarOpen(false);
+        }}
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+          isActive ? 'bg-gray-100 text-black' : 'text-gray-600 hover:bg-gray-50 hover:text-black'
+        }`}
+      >
+        <Icon size={16} />
+        {label}
+      </button>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0 lg:overflow-hidden">
-      {/* top section */}
       <header className="flex shrink-0 items-start justify-between px-8 py-6">
         <div>
           <h1
@@ -141,9 +135,7 @@ export default function AppLayout() {
                 <div key={breadcrumb.path} className="flex items-center gap-1 sm:gap-3">
                   <span
                     onClick={() => {
-                      if (!isLast) {
-                        navigate(breadcrumb.path);
-                      }
+                      if (!isLast) navigate(breadcrumb.path);
                     }}
                     className={
                       isLast ? 'font-medium text-gray-900' : 'cursor-pointer hover:text-black'
@@ -159,7 +151,6 @@ export default function AppLayout() {
           </div>
         </div>
 
-        {/* sidebar trigger */}
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
             <button className="flex cursor-pointer items-center gap-3 rounded-full hover:bg-gray-50">
@@ -188,7 +179,7 @@ export default function AppLayout() {
                 </Avatar>
 
                 <div>
-                  <p className="text-sm font-medium">{userEmail}</p>
+                  <p className="text-sm font-medium">{user?.email ?? ''}</p>
                   <p className="text-xs text-gray-500">User account</p>
                 </div>
               </div>
@@ -199,50 +190,16 @@ export default function AppLayout() {
             <nav className="space-y-6">
               <div>
                 <p className="mb-2 text-xs font-semibold text-gray-500">Menu</p>
-
-                <div className="space-y-1">
-                  {menuItems.slice(0, 4).map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.path;
-
-                    return (
-                      <button
-                        key={item.path}
-                        onClick={() => {
-                          navigate(item.path);
-                          setIsSidebarOpen(false);
-                        }}
-                        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                          isActive
-                            ? 'bg-gray-100 text-black'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-black'
-                        }`}
-                      >
-                        <Icon size={16} />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className="space-y-1">{menuItems.slice(0, 4).map(renderMenuButton)}</div>
               </div>
 
               <div>
                 <p className="mb-2 text-xs font-semibold text-gray-500">Account</p>
-
-                <button
-                  onClick={() => {
-                    navigate('/account-details');
-                    setIsSidebarOpen(false);
-                  }}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                    location.pathname === '/account-details'
-                      ? 'bg-gray-100 text-black'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-black'
-                  }`}
-                >
-                  <User size={16} />
-                  Account details
-                </button>
+                {renderMenuButton({
+                  label: 'Account details',
+                  path: '/account-details',
+                  icon: User,
+                })}
               </div>
             </nav>
 
@@ -259,7 +216,6 @@ export default function AppLayout() {
         </Sheet>
       </header>
 
-      {/* main content */}
       <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-auto">
         <div className="rounded-sm bg-white lg:h-full">
           <Outlet />

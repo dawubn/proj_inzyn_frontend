@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadDocument, startDocumentAnalysis } from '@/api/documents';
+import { formatFileSize, getTotalFileSize, validateFiles } from '@/api/documentService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -11,31 +13,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-
-function formatFileSize(size: number) {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  if (size < 1024 * 1024 * 1024) {
-    return `${(size / 1024 / 1024).toFixed(1)} MB`;
-  }
-
-  return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
-
-function getTotalFileSize(files: File[]) {
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-  return formatFileSize(totalSize);
-}
-
 export default function DocumentAnalysis() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const queryClient = useQueryClient();
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProfile, setSelectedProfile] = useState('automatic');
@@ -43,19 +23,8 @@ export default function DocumentAnalysis() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  function validateFiles(files: File[]) {
-    const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
-
-    if (invalidFile) {
-      return 'Supported formats: PDF, JPG, PNG.';
-    }
-
-    return '';
-  }
-
-  function handleFileSelect(files: File[]) {
+  function handleFiles(files: File[]) {
     const validationError = validateFiles(files);
-
     setErrorMessage('');
 
     if (validationError) {
@@ -69,18 +38,16 @@ export default function DocumentAnalysis() {
 
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-
     if (files.length > 0) {
-      handleFileSelect(files);
+      handleFiles(files);
     }
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
     const files = Array.from(event.dataTransfer.files ?? []);
-
     if (files.length > 0) {
-      handleFileSelect(files);
+      handleFiles(files);
     }
   }
 
@@ -88,39 +55,46 @@ export default function DocumentAnalysis() {
     event.preventDefault();
   }
 
-  async function handleStartAnalysis() {
+  const startAnalysisMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      const progressInterval = window.setInterval(() => {
+        setProgress((current) => (current >= 85 ? current : current + 5));
+      }, 300);
+
+      try {
+        for (const file of files) {
+          const uploadedDocument = await uploadDocument(file);
+          await startDocumentAnalysis(uploadedDocument.id);
+        }
+      } finally {
+        window.clearInterval(progressInterval);
+      }
+    },
+    onMutate: () => {
+      setIsProcessing(true);
+      setProgress(0);
+      setErrorMessage('');
+    },
+    onSuccess: async () => {
+      setProgress(100);
+      await queryClient.invalidateQueries({ queryKey: ['recentDocuments'] });
+      await queryClient.invalidateQueries({ queryKey: ['documentsFromLast7Days'] });
+    },
+    onError: (error) => {
+      console.error(error);
+      setErrorMessage('Something went wrong while processing the documents.');
+      setIsProcessing(false);
+      setProgress(0);
+    },
+  });
+
+  function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
       setErrorMessage('Select at least one document first.');
       return;
     }
 
-    try {
-      setIsProcessing(true);
-      setProgress(0);
-      setErrorMessage('');
-
-      const progressInterval = window.setInterval(() => {
-        setProgress((currentProgress) => {
-          if (currentProgress >= 85) {
-            return currentProgress;
-          }
-          return currentProgress + 5;
-        });
-      }, 300);
-
-      for (const file of selectedFiles) {
-        const uploadedDocument = await uploadDocument(file);
-        await startDocumentAnalysis(uploadedDocument.id);
-      }
-
-      window.clearInterval(progressInterval);
-      setProgress(100);
-    } catch (error) {
-      console.error(error);
-      setErrorMessage('Something went wrong while processing the documents.');
-      setIsProcessing(false);
-      setProgress(0);
-    }
+    startAnalysisMutation.mutate(selectedFiles);
   }
 
   if (isProcessing && selectedFiles.length > 0) {
@@ -172,13 +146,15 @@ export default function DocumentAnalysis() {
               className="hidden"
             />
 
-            <Button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-3 w-40 cursor-pointer bg-slate-950 text-white hover:bg-slate-900"
-            >
-              [Select files]
-            </Button>
+            <div className="mt-3 flex justify-center">
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-40 cursor-pointer bg-slate-950 text-white hover:bg-slate-900"
+              >
+                [Select files]
+              </Button>
+            </div>
           </div>
 
           <p className="mt-2 text-center text-xs text-gray-600 sm:text-sm">
@@ -241,7 +217,7 @@ export default function DocumentAnalysis() {
 
           <Button
             type="button"
-            disabled={selectedFiles.length === 0}
+            disabled={selectedFiles.length === 0 || startAnalysisMutation.isPending}
             onClick={handleStartAnalysis}
             className="mx-auto mt-6 flex h-11 w-full max-w-sm cursor-pointer bg-slate-950 text-sm font-bold text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-10 sm:h-12 sm:text-base lg:mt-12"
           >
