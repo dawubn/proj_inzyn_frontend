@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useRef, useState } from "react";
 import { uploadDocument, startDocumentAnalysis } from "@/api/documents";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export default function DocumentAnalysis() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
+  const navigate = useNavigate();
 
   function validateFiles(files: File[]) {
     const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
@@ -112,6 +114,9 @@ export default function DocumentAnalysis() {
 
       window.clearInterval(progressInterval);
       setProgress(100);
+      setTimeout(() => {
+        navigate("/analysis-result");
+      }, 1200);
     } catch (error) {
       console.error(error);
       setErrorMessage("Something went wrong while processing the documents.");
