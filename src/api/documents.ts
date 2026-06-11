@@ -1,39 +1,14 @@
-const API_URL = import.meta.env.VITE_API_URL;
+// src/api/documents.ts
 
-export interface UploadedDocumentResponse {
-  id: string;
-  filename?: string;
-  original_filename?: string;
-  status?: string;
-}
+import type {
+  UploadedDocumentResponse,
+  AnalysisResponse,
+  DocumentResponse,
+  DocumentsPage,
+} from './documents.types';
+import { getApiUrl, getAuthHeaders } from './http';
 
-export interface AnalysisResponse {
-  id: string;
-  status?: string;
-}
-
-export interface DocumentResponse {
-  id: string;
-  original_filename: string;
-  status: string;
-  created_at: string;
-}
-
-export interface DocumentsPage {
-  items: DocumentResponse[];
-  total: number;
-  page: number;
-  page_size: number;
-  pages: number;
-}
-
-function getAuthHeaders() {
-  const token = localStorage.getItem('access_token');
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
-}
+const API_URL = getApiUrl();
 
 export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
   const formData = new FormData();
@@ -74,7 +49,7 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
     throw new Error('Failed to fetch documents');
   }
 
-  const data: DocumentsPage = await response.json();
+  const data = (await response.json()) as DocumentsPage;
   return Array.isArray(data.items) ? data.items : [];
 }
 
@@ -97,6 +72,6 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
     throw new Error('Failed to fetch last 7 days documents');
   }
 
-  const data: DocumentsPage = await response.json();
+  const data = (await response.json()) as DocumentsPage;
   return Array.isArray(data.items) ? data.items : [];
 }

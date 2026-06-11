@@ -1,57 +1,21 @@
+// src/api/auth.ts
+
+import {
+  type LoginPayload,
+  type LoginResponse,
+  type RegisterPayload,
+  type RegisterResponse,
+  type MeResponse,
+  type RefreshResponse,
+  ACCESS_TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+  LOGIN_ROUTE,
+} from './auth.types';
+
 const API_URL = import.meta.env.VITE_API_URL as string;
 
 if (!API_URL) {
   throw new Error('Missing VITE_API_URL');
-}
-
-const ACCESS_TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
-const LOGIN_ROUTE = '/';
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-}
-
-export interface RegisterPayload {
-  email: string;
-  password: string;
-  full_name: string;
-  role: string;
-}
-
-export interface RegisterResponse {
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  is_verified: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface MeResponse {
-  created_at: string;
-  updated_at: string;
-  id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  is_active: boolean;
-  is_verified: boolean;
-}
-
-export interface RefreshResponse {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
 }
 
 function getAccessToken() {
@@ -86,8 +50,8 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 async function extractErrorMessage(response: Response, fallbackMessage: string) {
   try {
     const data = await response.json();
-    if (typeof data?.detail === 'string') return data.detail;
-    if (typeof data?.message === 'string') return data.message;
+    if (typeof (data as any)?.detail === 'string') return (data as any).detail;
+    if (typeof (data as any)?.message === 'string') return (data as any).message;
     return fallbackMessage;
   } catch {
     return fallbackMessage;

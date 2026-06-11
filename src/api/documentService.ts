@@ -1,22 +1,23 @@
-const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+// src/api/documentService.ts
 
-export function getStatusConfig(status: string | undefined): { label: string; color: string } {
-  switch (status) {
-    case 'processed':
-      return { label: 'Completed', color: 'text-[#65A30D]' };
-    case 'processing':
-      return { label: 'During analysis', color: 'text-[#0284C7]' };
-    case 'queued':
-    case 'uploaded':
-    case 'pending':
-      return { label: 'Queued', color: 'text-[#D97706]' };
-    case 'failed':
-      return { label: 'Problem with execution', color: 'text-[#B91C1C]' };
-    case 'archived':
-      return { label: 'Archived', color: 'text-[#6B7280]' };
-    default:
-      return { label: 'Unknown status', color: 'text-[#6B7280]' };
+import type { AllowedDocumentMimeType, StatusConfig, KnownStatus } from './documents.types';
+import {
+  ALLOWED_DOCUMENT_MIME_TYPES,
+  STATUS_CONFIG_MAP,
+  DEFAULT_STATUS_CONFIG,
+} from './documents.types';
+import { formatDate, formatFileSize } from '@/lib/formatters'; // albo względna ścieżka
+
+function isKnownStatus(status: string): status is KnownStatus {
+  return status in STATUS_CONFIG_MAP;
+}
+
+export function getStatusConfig(status: string | undefined): StatusConfig {
+  if (!status || !isKnownStatus(status)) {
+    return DEFAULT_STATUS_CONFIG;
   }
+
+  return STATUS_CONFIG_MAP[status];
 }
 
 export function isProblem(status: string | undefined): boolean {
@@ -27,29 +28,7 @@ export function isDuringAnalysis(status: string | undefined): boolean {
   return status === 'processing';
 }
 
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-export function formatFileSize(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  if (size < 1024 * 1024 * 1024) {
-    return `${(size / 1024 / 1024).toFixed(1)} MB`;
-  }
-
-  return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
-}
+export { formatDate, formatFileSize };
 
 export function getTotalFileSize(files: File[]): string {
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
@@ -57,7 +36,9 @@ export function getTotalFileSize(files: File[]): string {
 }
 
 export function validateFiles(files: File[]): string {
-  const invalidFile = files.find((file) => !allowedTypes.includes(file.type));
+  const invalidFile = files.find(
+    (file) => !ALLOWED_DOCUMENT_MIME_TYPES.includes(file.type as AllowedDocumentMimeType),
+  );
 
   if (invalidFile) {
     return 'Supported formats: PDF, JPG, PNG.';
