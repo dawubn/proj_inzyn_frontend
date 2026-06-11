@@ -1,4 +1,4 @@
-// src/api/auth.ts
+// src/api/auth/auth.ts
 
 import {
   type LoginPayload,

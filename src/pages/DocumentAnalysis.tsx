@@ -1,7 +1,13 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadDocument, startDocumentAnalysis } from '@/api/documents';
-import { formatFileSize, getTotalFileSize, validateFiles } from '@/api/documentService';
+
+import { uploadDocument, startDocumentAnalysis } from '@/api/documentApi/documentApi';
+import {
+  formatFileSize,
+  getTotalFileSize,
+  validateFiles,
+} from '@/api/documentApi/documentApi.Service';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -79,6 +85,7 @@ export default function DocumentAnalysis() {
       setProgress(100);
       await queryClient.invalidateQueries({ queryKey: ['recentDocuments'] });
       await queryClient.invalidateQueries({ queryKey: ['documentsFromLast7Days'] });
+      setIsProcessing(false);
     },
     onError: (error) => {
       console.error(error);

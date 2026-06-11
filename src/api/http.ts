@@ -1,6 +1,6 @@
 // src/api/http.ts
 
-import { ACCESS_TOKEN_KEY } from './auth.types';
+import { ACCESS_TOKEN_KEY } from './auth/auth.types';
 
 const API_URL = import.meta.env.VITE_API_URL as string;
 

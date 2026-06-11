@@ -1,10 +1,16 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+
 import { Button } from '@/components/ui/button';
-import { getMe } from '@/api/auth';
-import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documents';
-import { getStatusConfig, isProblem, isDuringAnalysis, formatDate } from '@/api/documentService';
+import { getMe } from '@/api/auth/auth';
+import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
+import {
+  getStatusConfig,
+  isProblem,
+  isDuringAnalysis,
+} from '@/api/documentApi/documentApi.Service';
+import { formatDate } from '@/lib/formatters';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -82,7 +88,10 @@ export default function Dashboard() {
                 <span className="text-4xl font-semibold tracking-tight text-black tabular-nums">
                   {irregularitiesCount}
                 </span>
-                <Button className="h-10 rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A]">
+                <Button
+                  onClick={() => navigate('/history')}
+                  className="h-10 rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A]"
+                >
                   Check your analysis history
                 </Button>
               </div>

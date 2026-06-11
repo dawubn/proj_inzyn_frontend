@@ -1,4 +1,4 @@
-// src/api/documents.types.ts
+// src/api/documentApi/documentApi.types.ts
 
 export interface UploadedDocumentResponse {
   id: string;

@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { loginUser } from '@/api/auth';
+import { loginUser } from '@/api/auth/auth';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {

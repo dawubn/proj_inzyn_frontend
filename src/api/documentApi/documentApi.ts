@@ -1,12 +1,12 @@
-// src/api/documents.ts
+// src/api/documentApi/documentApi.ts
 
+import { getApiUrl, getAuthHeaders } from '@/api/http';
 import type {
   UploadedDocumentResponse,
   AnalysisResponse,
   DocumentResponse,
   DocumentsPage,
-} from './documents.types';
-import { getApiUrl, getAuthHeaders } from './http';
+} from './documentApi.types';
 
 const API_URL = getApiUrl();
 

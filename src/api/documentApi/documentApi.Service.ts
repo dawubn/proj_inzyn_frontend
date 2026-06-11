@@ -1,12 +1,11 @@
-// src/api/documentService.ts
+// src/api/documentApi/documentService.ts
 
-import type { AllowedDocumentMimeType, StatusConfig, KnownStatus } from './documents.types';
+import type { AllowedDocumentMimeType, StatusConfig, KnownStatus } from './documentApi.types';
 import {
   ALLOWED_DOCUMENT_MIME_TYPES,
   STATUS_CONFIG_MAP,
   DEFAULT_STATUS_CONFIG,
-} from './documents.types';
-import { formatDate, formatFileSize } from '@/lib/formatters'; // albo względna ścieżka
+} from './documentApi.types';
 
 function isKnownStatus(status: string): status is KnownStatus {
   return status in STATUS_CONFIG_MAP;
@@ -28,7 +27,21 @@ export function isDuringAnalysis(status: string | undefined): boolean {
   return status === 'processing';
 }
 
-export { formatDate, formatFileSize };
+export function formatFileSize(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  if (size < 1024 * 1024 * 1024) {
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
 
 export function getTotalFileSize(files: File[]): string {
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);

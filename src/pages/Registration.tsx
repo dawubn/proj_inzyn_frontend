@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { registerUser, loginUser } from '@/api/auth';
+import { registerUser, loginUser } from '@/api/auth/auth';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function Register() {

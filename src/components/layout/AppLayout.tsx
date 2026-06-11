@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
   ChevronRight,
@@ -13,8 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 
-import { getMe } from '@/api/auth';
-import { useAuth } from '@/hooks/useAuth';
+import { useMe } from '@/hooks/auth/useAuth';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -72,21 +71,15 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const breadcrumbs = getBreadcrumbs(location.pathname);
-
-  const { data: user } = useQuery({
-    queryKey: ['me'],
-    queryFn: getMe,
-  });
+  const { data: user } = useMe();
 
   function handleLogout() {
     queryClient.removeQueries({ queryKey: ['me'] });
-    logout();
-    setIsSidebarOpen(false);
     navigate('/', { replace: true });
+    setIsSidebarOpen(false);
   }
 
   function renderMenuButton({ label, path, icon: Icon }: MenuButtonProps) {
