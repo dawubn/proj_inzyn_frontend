@@ -1,10 +1,16 @@
+// src/components/ProtectedRoute.tsx
+
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useMe } from '@/hooks/auth/useMe';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { data: user, isLoading } = useMe();
 
-  if (!isAuthenticated) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (!user) {
     return <Navigate to="/" replace />;
   }
 

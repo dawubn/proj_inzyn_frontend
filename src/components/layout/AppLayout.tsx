@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ArrowLeft, User, LogOut } from 'lucide-react';
 
-import { useMe } from '@/hooks/auth/useAuth';
+import { useMe } from '@/hooks/auth/useMe';
 import { useAppNavigation, menuItems } from '@/hooks/navigation/useAppNavigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';

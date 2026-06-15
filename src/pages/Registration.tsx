@@ -1,3 +1,5 @@
+// src/pages/Register.tsx
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -5,56 +7,50 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { registerUser, loginUser } from '@/api/auth/auth';
-import { useAuth } from '@/hooks/useAuth';
+import { useRegister } from '@/hooks/auth/useRegister';
+import { useLogin } from '@/hooks/auth/useLogin';
 
 export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const { login } = useAuth();
+  const registerMutation = useRegister();
+  const loginMutation = useLogin();
   const navigate = useNavigate();
 
-  const handleRegister = async () => {
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!fullName.trim()) {
+      setError('Account name is required');
+      return;
+    }
+
+    if (password !== repeatPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     try {
-      setLoading(true);
-      setError('');
-
-      if (!fullName.trim()) {
-        setError('Account name is required');
-        return;
-      }
-
-      if (password !== repeatPassword) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      await registerUser({
+      await registerMutation.mutateAsync({
         email,
         password,
         full_name: fullName.trim(),
         role: 'business_user',
       });
 
-      const loginResponse = await loginUser({
-        email,
-        password,
-      });
-
-      login(loginResponse.access_token, loginResponse.refresh_token);
+      await loginMutation.mutateAsync({ email, password });
       navigate('/dashboard');
     } catch {
       setError('Registration failed');
-    } finally {
-      setLoading(false);
     }
   };
+
+  const isPending = registerMutation.isPending || loginMutation.isPending;
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
@@ -72,7 +68,7 @@ export default function Register() {
           </CardHeader>
 
           <CardContent className="px-6 pt-0 pb-6">
-            <div className="space-y-5">
+            <form onSubmit={handleRegister} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Account name</Label>
                 <Input
@@ -117,11 +113,11 @@ export default function Register() {
               </div>
 
               <Button
-                onClick={handleRegister}
-                disabled={loading}
+                type="submit"
+                disabled={isPending}
                 className="mt-2 h-10 w-full cursor-pointer bg-black text-white hover:bg-black/90"
               >
-                {loading ? 'Creating account...' : 'Register'}
+                {isPending ? 'Creating account...' : 'Register'}
               </Button>
 
               {error && <p className="text-center text-sm text-red-500">{error}</p>}
@@ -144,7 +140,7 @@ export default function Register() {
                   Login
                 </Link>
               </div>
-            </div>
+            </form>
           </CardContent>
         </Card>
       </div>

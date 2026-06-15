@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { useMe } from '@/hooks/auth/useAuth';
+import { useMe } from '@/hooks/auth/useMe';
 import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
 import {
   getStatusConfig,

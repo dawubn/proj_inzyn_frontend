@@ -1,36 +1,28 @@
+// src/pages/Home.tsx
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { loginUser } from '@/api/auth/auth';
-import { useAuth } from '@/hooks/useAuth';
+import { useLogin } from '@/hooks/auth/useLogin';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const loginMutation = useLogin();
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setLoading(true);
-      setError('');
-
-      const response = await loginUser({ email, password });
-
-      login(response.access_token, response.refresh_token);
+      await loginMutation.mutateAsync({ email, password });
       navigate('/dashboard');
     } catch {
       setError('Invalid email or password');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -113,10 +105,10 @@ export default function Home() {
 
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loginMutation.isPending}
                   className="h-10 w-full cursor-pointer bg-black text-white hover:bg-black/90"
                 >
-                  {loading ? 'Logging in...' : 'Login'}
+                  {loginMutation.isPending ? 'Logging in...' : 'Login'}
                 </Button>
 
                 {error && <p className="text-center text-sm text-red-500">{error}</p>}
