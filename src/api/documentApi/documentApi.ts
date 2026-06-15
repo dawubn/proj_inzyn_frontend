@@ -1,6 +1,6 @@
 // src/api/documentApi/documentApi.ts
 
-import { getApiUrl, getAuthHeaders } from '@/api/http';
+import { API_URL, authorizedFetch } from '@/api/auth/auth';
 import type {
   UploadedDocumentResponse,
   AnalysisResponse,
@@ -8,15 +8,12 @@ import type {
   DocumentsPage,
 } from './documentApi.types';
 
-const API_URL = getApiUrl();
-
 export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await fetch(`${API_URL}/api/v1/documents`, {
+  const response = await authorizedFetch(`${API_URL}/api/v1/documents`, {
     method: 'POST',
-    headers: getAuthHeaders(),
     body: formData,
   });
 
@@ -28,9 +25,8 @@ export async function uploadDocument(file: File): Promise<UploadedDocumentRespon
 }
 
 export async function startDocumentAnalysis(documentId: string): Promise<AnalysisResponse> {
-  const response = await fetch(`${API_URL}/api/v1/documents/${documentId}/analyses`, {
+  const response = await authorizedFetch(`${API_URL}/api/v1/documents/${documentId}/analyses`, {
     method: 'POST',
-    headers: getAuthHeaders(),
   });
 
   if (!response.ok) {
@@ -41,9 +37,7 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
 }
 
 export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
-  const response = await fetch(`${API_URL}/api/v1/documents?page=1&page_size=10`, {
-    headers: getAuthHeaders(),
-  });
+  const response = await authorizedFetch(`${API_URL}/api/v1/documents?page=1&page_size=10`);
 
   if (!response.ok) {
     throw new Error('Failed to fetch documents');
@@ -61,11 +55,8 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   const dateFrom = from.toISOString().split('T')[0];
   const dateTo = now.toISOString().split('T')[0];
 
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${API_URL}/api/v1/documents?page=1&page_size=100&date_from=${dateFrom}&date_to=${dateTo}`,
-    {
-      headers: getAuthHeaders(),
-    },
   );
 
   if (!response.ok) {

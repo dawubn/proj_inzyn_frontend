@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+// src/pages/Dashboard.tsx
+
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { getMe } from '@/api/auth/auth';
+import { useMe } from '@/hooks/auth/useAuth';
 import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
 import {
   getStatusConfig,
@@ -14,13 +15,9 @@ import { formatDate } from '@/lib/formatters';
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [userName, setUserName] = useState('');
+  const { data: user } = useMe();
 
-  useEffect(() => {
-    getMe()
-      .then((u) => setUserName(u.full_name?.trim() || u.email || ''))
-      .catch(() => setUserName(''));
-  }, []);
+  const userName = user?.full_name?.trim() || user?.email || '';
 
   const { data: documents = [] } = useQuery({
     queryKey: ['recentDocuments'],

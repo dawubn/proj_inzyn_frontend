@@ -12,7 +12,7 @@ import {
   LOGIN_ROUTE,
 } from './auth.types';
 
-const API_URL = import.meta.env.VITE_API_URL as string;
+export const API_URL = import.meta.env.VITE_API_URL as string;
 
 if (!API_URL) {
   throw new Error('Missing VITE_API_URL');
@@ -49,16 +49,32 @@ async function parseJsonResponse<T>(response: Response): Promise<T> {
 
 async function extractErrorMessage(response: Response, fallbackMessage: string) {
   try {
-    const data = await response.json();
-    if (typeof (data as any)?.detail === 'string') return (data as any).detail;
-    if (typeof (data as any)?.message === 'string') return (data as any).message;
+    const data: unknown = await response.json();
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'detail' in data &&
+      typeof (data as Record<string, unknown>).detail === 'string'
+    ) {
+      return (data as Record<string, unknown>).detail as string;
+    }
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof (data as Record<string, unknown>).message === 'string'
+    ) {
+      return (data as Record<string, unknown>).message as string;
+    }
     return fallbackMessage;
   } catch {
     return fallbackMessage;
   }
 }
 
-async function authorizedFetch(input: string, init: RequestInit = {}, retry = true) {
+// Executes fetch with Bearer token. On 401 attempts a one-time token refresh —
+// on failure clears session and redirects to login.
+export async function authorizedFetch(input: string, init: RequestInit = {}, retry = true) {
   const token = getAccessToken();
 
   const response = await fetch(input, {

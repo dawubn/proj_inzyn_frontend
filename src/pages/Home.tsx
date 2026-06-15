@@ -17,15 +17,13 @@ export default function Home() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       setLoading(true);
       setError('');
 
-      const response = await loginUser({
-        email,
-        password,
-      });
+      const response = await loginUser({ email, password });
 
       login(response.access_token, response.refresh_token);
       navigate('/dashboard');
@@ -84,7 +82,7 @@ export default function Home() {
             </CardHeader>
 
             <CardContent className="px-6 pt-0 pb-6">
-              <div className="space-y-6">
+              <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -114,7 +112,7 @@ export default function Home() {
                 </div>
 
                 <Button
-                  onClick={handleLogin}
+                  type="submit"
                   disabled={loading}
                   className="h-10 w-full cursor-pointer bg-black text-white hover:bg-black/90"
                 >
@@ -129,7 +127,7 @@ export default function Home() {
                     Sign up
                   </Link>
                 </div>
-              </div>
+              </form>
             </CardContent>
           </Card>
         </div>

@@ -1,13 +1,13 @@
+// src/pages/DocumentAnalysis.tsx
+
 import { useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 
-import { uploadDocument, startDocumentAnalysis } from '@/api/documentApi/documentApi';
-import {
-  formatFileSize,
-  getTotalFileSize,
-  validateFiles,
-} from '@/api/documentApi/documentApi.Service';
-
+import { useFileSelection } from '@/hooks/analysis/useFileSelection';
+import { useDocumentAnalysis } from '@/hooks/analysis/useDocumentAnalysis';
+import { MAX_FILES_COUNT } from '@/api/documentApi/documentApi.types';
+import { getTotalFileSize } from '@/api/documentApi/documentApi.Service';
+import { formatFileSize } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,79 +21,20 @@ import {
 
 export default function DocumentAnalysis() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const queryClient = useQueryClient();
-
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [selectedProfile, setSelectedProfile] = useState('automatic');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [progress, setProgress] = useState(0);
 
-  function handleFiles(files: File[]) {
-    const validationError = validateFiles(files);
-    setErrorMessage('');
+  const {
+    fileEntries,
+    selectedFiles,
+    errorMessage,
+    setErrorMessage,
+    handleInputChange,
+    handleDrop,
+    handleDragOver,
+    handleRemoveFile,
+  } = useFileSelection();
 
-    if (validationError) {
-      setSelectedFiles([]);
-      setErrorMessage(validationError);
-      return;
-    }
-
-    setSelectedFiles(files);
-  }
-
-  function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length > 0) {
-      handleFiles(files);
-    }
-  }
-
-  function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const files = Array.from(event.dataTransfer.files ?? []);
-    if (files.length > 0) {
-      handleFiles(files);
-    }
-  }
-
-  function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-  }
-
-  const startAnalysisMutation = useMutation({
-    mutationFn: async (files: File[]) => {
-      const progressInterval = window.setInterval(() => {
-        setProgress((current) => (current >= 85 ? current : current + 5));
-      }, 300);
-
-      try {
-        for (const file of files) {
-          const uploadedDocument = await uploadDocument(file);
-          await startDocumentAnalysis(uploadedDocument.id);
-        }
-      } finally {
-        window.clearInterval(progressInterval);
-      }
-    },
-    onMutate: () => {
-      setIsProcessing(true);
-      setProgress(0);
-      setErrorMessage('');
-    },
-    onSuccess: async () => {
-      setProgress(100);
-      await queryClient.invalidateQueries({ queryKey: ['recentDocuments'] });
-      await queryClient.invalidateQueries({ queryKey: ['documentsFromLast7Days'] });
-      setIsProcessing(false);
-    },
-    onError: (error) => {
-      console.error(error);
-      setErrorMessage('Something went wrong while processing the documents.');
-      setIsProcessing(false);
-      setProgress(0);
-    },
-  });
+  const { isProcessing, progress, isPending, startAnalysis } = useDocumentAnalysis();
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
@@ -101,7 +42,7 @@ export default function DocumentAnalysis() {
       return;
     }
 
-    startAnalysisMutation.mutate(selectedFiles);
+    startAnalysis(selectedFiles);
   }
 
   if (isProcessing && selectedFiles.length > 0) {
@@ -165,28 +106,39 @@ export default function DocumentAnalysis() {
           </div>
 
           <p className="mt-2 text-center text-xs text-gray-600 sm:text-sm">
-            Supported formats: PDF, JPG, PNG
+            Supported formats: PDF, JPG, PNG · Max {MAX_FILES_COUNT} files
           </p>
 
-          {selectedFiles.length > 0 && (
+          {fileEntries.length > 0 && (
             <div className="mx-auto mt-4 w-full max-w-sm rounded-lg border border-[#E5E5E5] bg-white p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-900">
-                  Selected files ({selectedFiles.length})
-                </p>
+                <p className="text-sm font-medium text-gray-900">Imported files</p>
                 <p className="text-xs text-gray-500">{getTotalFileSize(selectedFiles)}</p>
               </div>
 
               <div className="mt-2 max-h-32 space-y-1.5 overflow-y-auto pr-1 sm:max-h-40">
-                {selectedFiles.map((file) => (
+                {fileEntries.map(({ id, file }, index) => (
                   <div
-                    key={`${file.name}-${file.size}`}
+                    key={id}
                     className="flex items-center justify-between gap-3 text-sm text-gray-600"
                   >
-                    <span className="truncate">{file.name}</span>
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {formatFileSize(file.size)}
-                    </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="shrink-0 text-xs font-medium text-gray-400">
+                        {index + 1}.
+                      </span>
+                      <span className="truncate">{file.name}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(id)}
+                        className="cursor-pointer text-gray-400 hover:text-red-500"
+                        aria-label={`Remove ${file.name}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -224,7 +176,7 @@ export default function DocumentAnalysis() {
 
           <Button
             type="button"
-            disabled={selectedFiles.length === 0 || startAnalysisMutation.isPending}
+            disabled={fileEntries.length === 0 || isPending}
             onClick={handleStartAnalysis}
             className="mx-auto mt-6 flex h-11 w-full max-w-sm cursor-pointer bg-slate-950 text-sm font-bold text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-10 sm:h-12 sm:text-base lg:mt-12"
           >

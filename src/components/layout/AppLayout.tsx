@@ -1,65 +1,22 @@
+// src/components/layout/AppLayout.tsx
+
 import { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  ChevronDown,
-  ChevronRight,
-  ArrowLeft,
-  LayoutDashboard,
-  History,
-  FileText,
-  Settings,
-  User,
-  LogOut,
-} from 'lucide-react';
+import { Outlet } from 'react-router-dom';
+import { ChevronDown, ChevronRight, ArrowLeft, User, LogOut } from 'lucide-react';
 
 import { useMe } from '@/hooks/auth/useAuth';
+import { useAppNavigation, menuItems } from '@/hooks/navigation/useAppNavigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
-
-const menuItems = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'History of analysis', path: '/history', icon: History },
-  { label: 'Document Analysis', path: '/document-analysis', icon: FileText },
-  { label: 'Rule profiles', path: '/rule-profiles', icon: Settings },
-  { label: 'Account details', path: '/account-details', icon: User },
-];
-
-type Breadcrumb = {
-  label: string;
-  path: string;
-};
-
-const breadcrumbMap: Record<string, Breadcrumb[]> = {
-  '/dashboard': [{ label: 'Dashboard', path: '/dashboard' }],
-  '/history': [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'History of analysis', path: '/history' },
-  ],
-  '/history/analysis-details': [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'History of analysis', path: '/history' },
-    { label: 'Analysis details', path: '/history/analysis-details' },
-  ],
-  '/document-analysis': [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Document Analysis', path: '/document-analysis' },
-  ],
-  '/rule-profiles': [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Rule profiles', path: '/rule-profiles' },
-  ],
-  '/account-details': [
-    { label: 'Dashboard', path: '/dashboard' },
-    { label: 'Account details', path: '/account-details' },
-  ],
-};
-
-function getBreadcrumbs(pathname: string) {
-  return breadcrumbMap[pathname] ?? [{ label: 'Dashboard', path: '/dashboard' }];
-}
 
 type MenuButtonProps = {
   label: string;
@@ -68,22 +25,17 @@ type MenuButtonProps = {
 };
 
 export default function AppLayout() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const breadcrumbs = getBreadcrumbs(location.pathname);
   const { data: user } = useMe();
+  const { navigate, currentPath, breadcrumbs, handleLogout } = useAppNavigation();
 
-  function handleLogout() {
-    queryClient.removeQueries({ queryKey: ['me'] });
-    navigate('/', { replace: true });
+  function logout() {
+    handleLogout();
     setIsSidebarOpen(false);
   }
 
   function renderMenuButton({ label, path, icon: Icon }: MenuButtonProps) {
-    const isActive = location.pathname === path;
+    const isActive = currentPath === path;
 
     return (
       <button
@@ -130,9 +82,7 @@ export default function AppLayout() {
                 <div key={breadcrumb.path} className="flex items-center gap-1 sm:gap-3">
                   <span
                     onClick={() => {
-                      if (!isLast) {
-                        navigate(breadcrumb.path);
-                      }
+                      if (!isLast) navigate(breadcrumb.path);
                     }}
                     className={
                       isLast ? 'font-medium text-gray-900' : 'cursor-pointer hover:text-black'
@@ -156,7 +106,6 @@ export default function AppLayout() {
                   <User size={18} />
                 </AvatarFallback>
               </Avatar>
-
               <ChevronDown size={16} className="text-gray-500" />
             </button>
           </SheetTrigger>
@@ -167,6 +116,9 @@ export default function AppLayout() {
           >
             <SheetHeader>
               <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <SheetDescription className="sr-only">
+                Application navigation and user account options
+              </SheetDescription>
 
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
@@ -176,7 +128,7 @@ export default function AppLayout() {
                 </Avatar>
 
                 <div>
-                  <p className="text-sm font-medium">{user?.email ?? ''}</p>
+                  <p className="text-sm font-medium">{user?.email ?? '—'}</p>
                   <p className="text-xs text-gray-500">User account</p>
                 </div>
               </div>
@@ -202,7 +154,7 @@ export default function AppLayout() {
 
             <div className="absolute bottom-6 left-6 right-6">
               <Button
-                onClick={handleLogout}
+                onClick={logout}
                 className="w-full cursor-pointer bg-black text-white hover:bg-black/90"
               >
                 <LogOut size={16} />
