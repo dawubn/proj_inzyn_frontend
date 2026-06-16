@@ -101,15 +101,10 @@ export default function DocumentAnalysis() {
       }, 300);
 
       for (const file of selectedFiles) {
-        console.log("Uploading file:", file.name);
-
+        
         const uploadedDocument = await uploadDocument(file);
 
-        console.log("Uploaded document:", uploadedDocument);
-
         await startDocumentAnalysis(uploadedDocument.id);
-
-        console.log("Analysis started for:", file.name);
       }
 
       window.clearInterval(progressInterval);
