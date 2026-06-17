@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import DocumentAnalysis from "./pages/DocumentAnalysis";
+import AnalysisResult from "./pages/AnalysisResults";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
@@ -57,6 +58,8 @@ function App() {
               </div>
             }
           />
+
+          <Route path="/analysis-result" element={<AnalysisResult />} />
         </Route>
       </Routes>
     </BrowserRouter>
