@@ -1,5 +1,3 @@
-// src/api/documentApi/documentApi.Service.ts
-
 import type { AllowedDocumentMimeType, StatusConfig, KnownStatus } from './documentApi.types';
 import {
   ALLOWED_DOCUMENT_MIME_TYPES,
@@ -14,19 +12,24 @@ function isKnownStatus(status: string): status is KnownStatus {
   return status in STATUS_CONFIG_MAP;
 }
 
-export function getStatusConfig(status: string | undefined): StatusConfig {
-  if (!status || !isKnownStatus(status)) return DEFAULT_STATUS_CONFIG;
-  return STATUS_CONFIG_MAP[status];
-}
+export type DocumentStatusView = StatusConfig & {
+  key: string;
+  isProblem: boolean;
+  isDuringAnalysis: boolean;
+};
 
-// Helpers below intentionally kept as named functions — they serve as
-// readable intent markers in UI logic rather than raw string comparisons.
-export function isProblem(status: string | undefined): boolean {
-  return status === 'failed';
-}
+export function getDocumentStatus(status: string | undefined): DocumentStatusView {
+  const normalizedStatus = status && isKnownStatus(status) ? status : 'unknown';
 
-export function isDuringAnalysis(status: string | undefined): boolean {
-  return status === 'processing';
+  const config =
+    normalizedStatus === 'unknown' ? DEFAULT_STATUS_CONFIG : STATUS_CONFIG_MAP[normalizedStatus];
+
+  return {
+    key: normalizedStatus,
+    ...config,
+    isProblem: normalizedStatus === 'failed',
+    isDuringAnalysis: normalizedStatus === 'processing',
+  };
 }
 
 export function getTotalFileSize(files: File[]): string {
@@ -34,8 +37,9 @@ export function getTotalFileSize(files: File[]): string {
 }
 
 export function validateFiles(files: File[]): string {
-  if (files.length > MAX_FILES_COUNT)
+  if (files.length > MAX_FILES_COUNT) {
     return `You can upload up to ${MAX_FILES_COUNT} files at once.`;
+  }
 
   const invalidType = files.find(
     (file) => !ALLOWED_DOCUMENT_MIME_TYPES.includes(file.type as AllowedDocumentMimeType),
@@ -43,7 +47,9 @@ export function validateFiles(files: File[]): string {
   if (invalidType) return 'Supported formats: PDF, JPG, PNG.';
 
   const oversized = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);
-  if (oversized) return `File size must not exceed ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`;
+  if (oversized) {
+    return `File size must not exceed ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`;
+  }
 
   return '';
 }

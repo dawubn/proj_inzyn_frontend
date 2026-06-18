@@ -39,8 +39,8 @@ export default function Register() {
       await registerMutation.mutateAsync({
         email,
         password,
-        full_name: fullName.trim(),
-        role: 'business_user',
+        fullname: fullName.trim(),
+        role: 'businessuser',
       });
 
       await loginMutation.mutateAsync({ email, password });

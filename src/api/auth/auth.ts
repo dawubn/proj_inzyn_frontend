@@ -1,16 +1,6 @@
 // src/api/auth/auth.ts
-
-import {
-  type LoginPayload,
-  type LoginResponse,
-  type RegisterPayload,
-  type RegisterResponse,
-  type MeResponse,
-  type RefreshResponse,
-  ACCESS_TOKEN_KEY,
-  REFRESH_TOKEN_KEY,
-  LOGIN_ROUTE,
-} from './auth.types';
+import type { LoginPayload, MeResponse, RegisterPayload, RegisterResponse } from './auth.types';
+import { LOGIN_ROUTE } from './auth.types';
 
 export const API_URL = import.meta.env.VITE_API_URL as string;
 
@@ -18,71 +8,76 @@ if (!API_URL) {
   throw new Error('Missing VITE_API_URL');
 }
 
-function getAccessToken() {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-function getRefreshToken() {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-function setTokens(accessToken: string, refreshToken?: string) {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-
-  if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-  }
-}
-
-function clearTokens() {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
-
 function redirectToLogin() {
   window.location.replace(LOGIN_ROUTE);
 }
 
-async function parseJsonResponse<T>(response: Response): Promise<T> {
-  return response.json() as Promise<T>;
-}
-
-async function extractErrorMessage(response: Response, fallbackMessage: string) {
+async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   try {
-    const data: unknown = await response.json();
-    if (
-      typeof data === 'object' &&
-      data !== null &&
-      'detail' in data &&
-      typeof (data as Record<string, unknown>).detail === 'string'
-    ) {
-      return (data as Record<string, unknown>).detail as string;
+    const data = (await response.json()) as unknown;
+
+    if (typeof data === 'object' && data !== null) {
+      if ('detail' in data && typeof data.detail === 'string') {
+        return data.detail;
+      }
+
+      if ('message' in data && typeof data.message === 'string') {
+        return data.message;
+      }
     }
-    if (
-      typeof data === 'object' &&
-      data !== null &&
-      'message' in data &&
-      typeof (data as Record<string, unknown>).message === 'string'
-    ) {
-      return (data as Record<string, unknown>).message as string;
-    }
+
     return fallbackMessage;
   } catch {
     return fallbackMessage;
   }
 }
 
-// Executes fetch with Bearer token. On 401 attempts a one-time token refresh —
-// on failure clears session and redirects to login.
-export async function authorizedFetch(input: string, init: RequestInit = {}, retry = true) {
-  const token = getAccessToken();
+export function isUuidPlaceholder(value?: string | null): boolean {
+  if (!value) {
+    return false;
+  }
 
+  return /^user\s+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+}
+
+export function getUserDisplayName(
+  user?: Pick<MeResponse, 'id' | 'full_name' | 'email'> | null,
+): string {
+  const fullname = user?.full_name?.trim();
+
+  if (fullname && !isUuidPlaceholder(fullname)) {
+    return fullname;
+  }
+
+  if (user?.id) {
+    const shortId = user.id.replace(/-/g, '').slice(-6).toUpperCase();
+    return `User ID:${shortId}`;
+  }
+
+  return '';
+}
+
+export async function refreshTokens(): Promise<void> {
+  const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('Session expired');
+  }
+}
+
+export async function authorizedFetch(
+  input: string,
+  init: RequestInit = {},
+  retry = true,
+): Promise<Response> {
   const response = await fetch(input, {
     ...init,
-    headers: {
-      ...(init.headers ?? {}),
-      Authorization: token ? `Bearer ${token}` : '',
-    },
+    credentials: 'include',
   });
 
   if (response.status !== 401) {
@@ -90,44 +85,36 @@ export async function authorizedFetch(input: string, init: RequestInit = {}, ret
   }
 
   if (!retry) {
-    clearTokens();
     redirectToLogin();
     throw new Error('Session expired');
   }
 
   try {
-    const newAccessToken = await refreshAccessToken();
+    await refreshTokens();
 
-    return fetch(input, {
+    return await fetch(input, {
       ...init,
-      headers: {
-        ...(init.headers ?? {}),
-        Authorization: `Bearer ${newAccessToken}`,
-      },
+      credentials: 'include',
     });
   } catch {
-    clearTokens();
     redirectToLogin();
     throw new Error('Session expired');
   }
 }
 
-export async function loginUser(data: LoginPayload): Promise<LoginResponse> {
+export async function loginUser(data: LoginPayload): Promise<void> {
   const response = await fetch(`${API_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include',
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
     throw new Error(await extractErrorMessage(response, 'Invalid email or password'));
   }
-
-  const result = await parseJsonResponse<LoginResponse>(response);
-  setTokens(result.access_token, result.refresh_token);
-  return result;
 }
 
 export async function registerUser(data: RegisterPayload): Promise<RegisterResponse> {
@@ -136,6 +123,7 @@ export async function registerUser(data: RegisterPayload): Promise<RegisterRespo
     headers: {
       'Content-Type': 'application/json',
     },
+    credentials: 'include',
     body: JSON.stringify(data),
   });
 
@@ -143,7 +131,7 @@ export async function registerUser(data: RegisterPayload): Promise<RegisterRespo
     throw new Error(await extractErrorMessage(response, 'Registration failed'));
   }
 
-  return parseJsonResponse<RegisterResponse>(response);
+  return response.json() as Promise<RegisterResponse>;
 }
 
 export async function getMe(): Promise<MeResponse> {
@@ -153,41 +141,12 @@ export async function getMe(): Promise<MeResponse> {
     throw new Error(await extractErrorMessage(response, 'Failed to fetch user'));
   }
 
-  return parseJsonResponse<MeResponse>(response);
+  return response.json() as Promise<MeResponse>;
 }
 
-export async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getRefreshToken();
-
-  if (!refreshToken) {
-    clearTokens();
-    redirectToLogin();
-    throw new Error('Missing refresh token');
-  }
-
-  const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+export async function logoutUser(): Promise<void> {
+  await fetch(`${API_URL}/api/v1/auth/logout`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      refresh_token: refreshToken,
-    }),
+    credentials: 'include',
   });
-
-  if (!response.ok) {
-    clearTokens();
-    redirectToLogin();
-    throw new Error('Session expired');
-  }
-
-  const data = await parseJsonResponse<RefreshResponse>(response);
-  setTokens(data.access_token, data.refresh_token);
-
-  return data.access_token;
-}
-
-export function logoutUser() {
-  clearTokens();
-  redirectToLogin();
 }

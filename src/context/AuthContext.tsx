@@ -1,26 +1,20 @@
-import { useState } from "react";
-import { AuthContext } from "./auth-context";
+// src/context/AuthContext.tsx
+import type { ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { logoutUser } from '@/api/auth/auth';
+import { AuthContext } from './auth-context';
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    !!localStorage.getItem("access_token")
-  );
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
 
-  const login = (token: string, refreshToken: string) => {
-    localStorage.setItem("access_token", token);
-    localStorage.setItem("refresh_token", refreshToken);
-    setIsAuthenticated(true);
-  };
+  async function logout() {
+    try {
+      await logoutUser();
+    } finally {
+      queryClient.clear();
+      window.location.replace('/');
+    }
+  }
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    setIsAuthenticated(false);
-  };
-
-  return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ logout }}>{children}</AuthContext.Provider>;
 }

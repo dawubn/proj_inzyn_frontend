@@ -1,23 +1,18 @@
-// src/pages/Dashboard.tsx
-
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
+import { getUserDisplayName } from '@/api/auth/auth';
 import { useMe } from '@/hooks/auth/useMe';
 import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
-import {
-  getStatusConfig,
-  isProblem,
-  isDuringAnalysis,
-} from '@/api/documentApi/documentApi.Service';
+import { getDocumentStatus } from '@/api/documentApi/documentApi.Service';
 import { formatDate } from '@/lib/formatters';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useMe();
 
-  const userName = user?.full_name?.trim() || user?.email || '';
+  const userName = getUserDisplayName(user);
 
   const { data: documents = [] } = useQuery({
     queryKey: ['recentDocuments'],
@@ -30,8 +25,12 @@ export default function Dashboard() {
   });
 
   const analyzedCount = statisticsDocuments.length;
-  const irregularitiesCount = statisticsDocuments.filter((d) => isProblem(d.status)).length;
-  const inProgressCount = statisticsDocuments.filter((d) => isDuringAnalysis(d.status)).length;
+  const irregularitiesCount = statisticsDocuments.filter(
+    (d) => getDocumentStatus(d.status).isProblem,
+  ).length;
+  const inProgressCount = statisticsDocuments.filter(
+    (d) => getDocumentStatus(d.status).isDuringAnalysis,
+  ).length;
 
   return (
     <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
@@ -39,7 +38,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="max-w-full overflow-hidden text-2xl font-semibold tracking-tight text-[#111111] sm:max-w-[70%] sm:text-[32px]">
-              <span className="block truncate">Hi, {userName}</span>
+              <span className="block truncate">{userName ? `Hi, ${userName}` : 'Hi'}</span>
             </h1>
             <Button
               onClick={() => navigate('/document-analysis')}
@@ -59,14 +58,14 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {documents.map((doc) => {
-                    const cfg = getStatusConfig(doc.status);
+                    const status = getDocumentStatus(doc.status);
                     return (
                       <div key={doc.id} className="min-w-0">
                         <p className="truncate text-sm font-medium text-[#111827]">
                           {doc.original_filename}
                         </p>
-                        <p className={`truncate text-xs font-semibold ${cfg.color}`}>
-                          {cfg.label} • {formatDate(doc.created_at)}
+                        <p className={`truncate text-xs font-semibold ${status.color}`}>
+                          {status.label} • {formatDate(doc.created_at)}
                         </p>
                       </div>
                     );
