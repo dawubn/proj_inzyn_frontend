@@ -74,8 +74,8 @@ export const getListUserDocumentsApiV1DocumentsGetUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/documents?${stringifiedParams}`
-    : `/api/v1/documents`;
+    ? `http://localhost:8000/api/v1/documents?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/documents`;
 };
 
 /**
@@ -106,7 +106,7 @@ export const listUserDocumentsApiV1DocumentsGet = async (
 export const getListUserDocumentsApiV1DocumentsGetQueryKey = (
   params?: ListUserDocumentsApiV1DocumentsGetParams,
 ) => {
-  return [`/api/v1/documents`, ...(params ? [params] : [])] as const;
+  return [`http://localhost:8000/api/v1/documents`, ...(params ? [params] : [])] as const;
 };
 
 export const getListUserDocumentsApiV1DocumentsGetQueryOptions = <
@@ -246,7 +246,7 @@ export type uploadDocumentApiV1DocumentsPostResponse =
   | uploadDocumentApiV1DocumentsPostResponseError;
 
 export const getUploadDocumentApiV1DocumentsPostUrl = () => {
-  return `/api/v1/documents`;
+  return `http://localhost:8000/api/v1/documents`;
 };
 
 /**
@@ -395,7 +395,7 @@ export type getDocumentApiV1DocumentsDocumentIdGetResponse =
   | getDocumentApiV1DocumentsDocumentIdGetResponseError;
 
 export const getGetDocumentApiV1DocumentsDocumentIdGetUrl = (documentId: string) => {
-  return `/api/v1/documents/${documentId}`;
+  return `http://localhost:8000/api/v1/documents/${documentId}`;
 };
 
 /**
@@ -425,7 +425,7 @@ export const getDocumentApiV1DocumentsDocumentIdGet = async (
 };
 
 export const getGetDocumentApiV1DocumentsDocumentIdGetQueryKey = (documentId: string) => {
-  return [`/api/v1/documents/${documentId}`] as const;
+  return [`http://localhost:8000/api/v1/documents/${documentId}`] as const;
 };
 
 export const getGetDocumentApiV1DocumentsDocumentIdGetQueryOptions = <
@@ -611,7 +611,7 @@ export type deleteDocumentApiV1DocumentsDocumentIdDeleteResponse =
   | deleteDocumentApiV1DocumentsDocumentIdDeleteResponseError;
 
 export const getDeleteDocumentApiV1DocumentsDocumentIdDeleteUrl = (documentId: string) => {
-  return `/api/v1/documents/${documentId}`;
+  return `http://localhost:8000/api/v1/documents/${documentId}`;
 };
 
 /**
@@ -762,8 +762,8 @@ export const getListAllDocumentsAdminApiV1DocumentsAdminAllGetUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/documents/admin/all?${stringifiedParams}`
-    : `/api/v1/documents/admin/all`;
+    ? `http://localhost:8000/api/v1/documents/admin/all?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/documents/admin/all`;
 };
 
 /**
@@ -796,7 +796,7 @@ export const listAllDocumentsAdminApiV1DocumentsAdminAllGet = async (
 export const getListAllDocumentsAdminApiV1DocumentsAdminAllGetQueryKey = (
   params?: ListAllDocumentsAdminApiV1DocumentsAdminAllGetParams,
 ) => {
-  return [`/api/v1/documents/admin/all`, ...(params ? [params] : [])] as const;
+  return [`http://localhost:8000/api/v1/documents/admin/all`, ...(params ? [params] : [])] as const;
 };
 
 export const getListAllDocumentsAdminApiV1DocumentsAdminAllGetQueryOptions = <

@@ -16,6 +16,7 @@ import { formatDate } from '@/lib/formatters';
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useMe();
+  console.log('User data:', user); // Debugging line to check the structure of user data
 
   const userName = user?.full_name?.trim() || user?.email || '';
 

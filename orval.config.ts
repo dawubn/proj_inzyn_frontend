@@ -11,6 +11,7 @@ export default defineConfig({
             httpClient: 'fetch',
             formatter: 'prettier',
             clean: true,
+            baseUrl: `${process.env.VITE_API_URL || 'http://localhost:8000'}`,
         },
     },
 });

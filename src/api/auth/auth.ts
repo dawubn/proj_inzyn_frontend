@@ -72,17 +72,11 @@ async function extractErrorMessage(response: Response, fallbackMessage: string) 
   }
 }
 
-// Executes fetch with Bearer token. On 401 attempts a one-time token refresh —
-// on failure clears session and redirects to login.
+// Executes fetch with HttpOnly cookies. Tokens are in secure cookies, not localStorage.
 export async function authorizedFetch(input: string, init: RequestInit = {}, retry = true) {
-  const token = getAccessToken();
-
   const response = await fetch(input, {
     ...init,
-    headers: {
-      ...(init.headers ?? {}),
-      Authorization: token ? `Bearer ${token}` : '',
-    },
+    credentials: 'include',
   });
 
   if (response.status !== 401) {
@@ -96,15 +90,19 @@ export async function authorizedFetch(input: string, init: RequestInit = {}, ret
   }
 
   try {
-    const newAccessToken = await refreshAccessToken();
-
-    return fetch(input, {
+    const refreshResponse = await fetch(input, {
       ...init,
-      headers: {
-        ...(init.headers ?? {}),
-        Authorization: `Bearer ${newAccessToken}`,
-      },
+      credentials: 'include',
+      method: 'POST',
     });
+
+    if (!refreshResponse.ok) {
+      clearTokens();
+      redirectToLogin();
+      throw new Error('Session expired');
+    }
+
+    return refreshResponse;
   } catch {
     clearTokens();
     redirectToLogin();

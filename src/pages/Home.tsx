@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useLogin } from '@/hooks/auth/useLogin';
+import { useAuthContext } from '@/context/auth-context';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -15,12 +16,27 @@ export default function Home() {
 
   const loginMutation = useLogin();
   const navigate = useNavigate();
+  const authContext = useAuthContext();
+
+  if (authContext?.isAuthenticated === null) {
+    return null;
+  }
+
+  if (authContext?.isAuthenticated === true) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
-      await loginMutation.mutateAsync({ email, password });
-      navigate('/dashboard');
+      const response = await loginMutation.mutateAsync({ data: { email, password } });
+      if (response.status === 204) {
+        authContext?.setIsAuthenticated(true);
+        navigate('/dashboard');
+      } else {
+        setError('Login failed');
+      }
     } catch {
       setError('Invalid email or password');
     }

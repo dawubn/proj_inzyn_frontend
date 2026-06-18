@@ -44,7 +44,7 @@ export type getReportApiV1ReportsAnalysisIdGetResponse =
   | getReportApiV1ReportsAnalysisIdGetResponseError;
 
 export const getGetReportApiV1ReportsAnalysisIdGetUrl = (analysisId: string) => {
-  return `/api/v1/reports/${analysisId}`;
+  return `http://localhost:8000/api/v1/reports/${analysisId}`;
 };
 
 /**
@@ -70,7 +70,7 @@ export const getReportApiV1ReportsAnalysisIdGet = async (
 };
 
 export const getGetReportApiV1ReportsAnalysisIdGetQueryKey = (analysisId: string) => {
-  return [`/api/v1/reports/${analysisId}`] as const;
+  return [`http://localhost:8000/api/v1/reports/${analysisId}`] as const;
 };
 
 export const getGetReportApiV1ReportsAnalysisIdGetQueryOptions = <

@@ -1,14 +1,19 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { LoginPayload, LoginResponse } from '@/api/auth/auth.types';
-import { loginUser } from '@/api/auth/auth';
+import { useLoginApiV1AuthLoginPost } from '@/api/generated/auth/auth';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function useLogin() {
   const queryClient = useQueryClient();
 
-  return useMutation<LoginResponse, Error, LoginPayload>({
-    mutationFn: (payload) => loginUser(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['me'] });
+  return useLoginApiV1AuthLoginPost({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: [`${import.meta.env.VITE_API_URL}/api/v1/users/me`]
+        });
+      },
+    },
+    fetch: {
+      credentials: 'include',
     },
   });
 }

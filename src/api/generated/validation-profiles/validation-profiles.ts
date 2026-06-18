@@ -51,7 +51,7 @@ export type createProfileApiV1ValidationProfilesPostResponse =
   | createProfileApiV1ValidationProfilesPostResponseError;
 
 export const getCreateProfileApiV1ValidationProfilesPostUrl = () => {
-  return `/api/v1/validation-profiles`;
+  return `http://localhost:8000/api/v1/validation-profiles`;
 };
 
 /**
@@ -174,7 +174,7 @@ export type listProfilesApiV1ValidationProfilesGetResponse =
   | listProfilesApiV1ValidationProfilesGetResponseError;
 
 export const getListProfilesApiV1ValidationProfilesGetUrl = () => {
-  return `/api/v1/validation-profiles`;
+  return `http://localhost:8000/api/v1/validation-profiles`;
 };
 
 /**
@@ -199,7 +199,7 @@ export const listProfilesApiV1ValidationProfilesGet = async (
 };
 
 export const getListProfilesApiV1ValidationProfilesGetQueryKey = () => {
-  return [`/api/v1/validation-profiles`] as const;
+  return [`http://localhost:8000/api/v1/validation-profiles`] as const;
 };
 
 export const getListProfilesApiV1ValidationProfilesGetQueryOptions = <

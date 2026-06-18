@@ -81,8 +81,8 @@ export const getRedactLocalOcrApiV1RedactionsPostUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/redactions?${stringifiedParams}`
-    : `/api/v1/redactions`;
+    ? `http://localhost:8000/api/v1/redactions?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/redactions`;
 };
 
 /**
@@ -239,7 +239,7 @@ export type listRedactionsApiV1RedactionsGetResponse =
   | listRedactionsApiV1RedactionsGetResponseError;
 
 export const getListRedactionsApiV1RedactionsGetUrl = () => {
-  return `/api/v1/redactions`;
+  return `http://localhost:8000/api/v1/redactions`;
 };
 
 /**
@@ -265,7 +265,7 @@ export const listRedactionsApiV1RedactionsGet = async (
 };
 
 export const getListRedactionsApiV1RedactionsGetQueryKey = () => {
-  return [`/api/v1/redactions`] as const;
+  return [`http://localhost:8000/api/v1/redactions`] as const;
 };
 
 export const getListRedactionsApiV1RedactionsGetQueryOptions = <
@@ -411,8 +411,8 @@ export const getTriggerLocalOcrAsyncApiV1RedactionsLocalOcrPostUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/redactions/local-ocr?${stringifiedParams}`
-    : `/api/v1/redactions/local-ocr`;
+    ? `http://localhost:8000/api/v1/redactions/local-ocr?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/redactions/local-ocr`;
 };
 
 /**
@@ -580,8 +580,8 @@ export const getTriggerFullOcrApiV1RedactionsFullOcrPostUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/redactions/full-ocr?${stringifiedParams}`
-    : `/api/v1/redactions/full-ocr`;
+    ? `http://localhost:8000/api/v1/redactions/full-ocr?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/redactions/full-ocr`;
 };
 
 /**
@@ -749,8 +749,8 @@ export const getTriggerAzureOcrApiV1RedactionsAzureOcrPostUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/redactions/azure-ocr?${stringifiedParams}`
-    : `/api/v1/redactions/azure-ocr`;
+    ? `http://localhost:8000/api/v1/redactions/azure-ocr?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/redactions/azure-ocr`;
 };
 
 /**
@@ -918,8 +918,8 @@ export const getTriggerLegalAnalysisApiV1RedactionsLegalAnalysisPostUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/api/v1/redactions/legal-analysis?${stringifiedParams}`
-    : `/api/v1/redactions/legal-analysis`;
+    ? `http://localhost:8000/api/v1/redactions/legal-analysis?${stringifiedParams}`
+    : `http://localhost:8000/api/v1/redactions/legal-analysis`;
 };
 
 /**
@@ -1090,7 +1090,7 @@ export type listAllRedactionsAdminApiV1RedactionsAdminAllGetResponse =
   | listAllRedactionsAdminApiV1RedactionsAdminAllGetResponseError;
 
 export const getListAllRedactionsAdminApiV1RedactionsAdminAllGetUrl = () => {
-  return `/api/v1/redactions/admin/all`;
+  return `http://localhost:8000/api/v1/redactions/admin/all`;
 };
 
 /**
@@ -1118,7 +1118,7 @@ export const listAllRedactionsAdminApiV1RedactionsAdminAllGet = async (
 };
 
 export const getListAllRedactionsAdminApiV1RedactionsAdminAllGetQueryKey = () => {
-  return [`/api/v1/redactions/admin/all`] as const;
+  return [`http://localhost:8000/api/v1/redactions/admin/all`] as const;
 };
 
 export const getListAllRedactionsAdminApiV1RedactionsAdminAllGetQueryOptions = <
@@ -1291,7 +1291,7 @@ export type getRedactionApiV1RedactionsAnalysisIdGetResponse =
   | getRedactionApiV1RedactionsAnalysisIdGetResponseError;
 
 export const getGetRedactionApiV1RedactionsAnalysisIdGetUrl = (analysisId: string) => {
-  return `/api/v1/redactions/${analysisId}`;
+  return `http://localhost:8000/api/v1/redactions/${analysisId}`;
 };
 
 /**
@@ -1320,7 +1320,7 @@ export const getRedactionApiV1RedactionsAnalysisIdGet = async (
 };
 
 export const getGetRedactionApiV1RedactionsAnalysisIdGetQueryKey = (analysisId: string) => {
-  return [`/api/v1/redactions/${analysisId}`] as const;
+  return [`http://localhost:8000/api/v1/redactions/${analysisId}`] as const;
 };
 
 export const getGetRedactionApiV1RedactionsAnalysisIdGetQueryOptions = <
@@ -1506,7 +1506,7 @@ export type deleteRedactionApiV1RedactionsAnalysisIdDeleteResponse =
   | deleteRedactionApiV1RedactionsAnalysisIdDeleteResponseError;
 
 export const getDeleteRedactionApiV1RedactionsAnalysisIdDeleteUrl = (analysisId: string) => {
-  return `/api/v1/redactions/${analysisId}`;
+  return `http://localhost:8000/api/v1/redactions/${analysisId}`;
 };
 
 /**

@@ -45,7 +45,7 @@ export type registerApiV1AuthRegisterPostResponse =
   | registerApiV1AuthRegisterPostResponseError;
 
 export const getRegisterApiV1AuthRegisterPostUrl = () => {
-  return `/api/v1/auth/register`;
+  return `http://localhost:8000/api/v1/auth/register`;
 };
 
 /**
@@ -166,7 +166,7 @@ export type loginApiV1AuthLoginPostResponse =
   | loginApiV1AuthLoginPostResponseError;
 
 export const getLoginApiV1AuthLoginPostUrl = () => {
-  return `/api/v1/auth/login`;
+  return `http://localhost:8000/api/v1/auth/login`;
 };
 
 /**
@@ -290,7 +290,7 @@ export type refreshApiV1AuthRefreshPostResponse =
   | refreshApiV1AuthRefreshPostResponseError;
 
 export const getRefreshApiV1AuthRefreshPostUrl = () => {
-  return `/api/v1/auth/refresh`;
+  return `http://localhost:8000/api/v1/auth/refresh`;
 };
 
 /**
@@ -394,7 +394,7 @@ export type logoutApiV1AuthLogoutPostResponseSuccess = logoutApiV1AuthLogoutPost
 export type logoutApiV1AuthLogoutPostResponse = logoutApiV1AuthLogoutPostResponseSuccess;
 
 export const getLogoutApiV1AuthLogoutPostUrl = () => {
-  return `/api/v1/auth/logout`;
+  return `http://localhost:8000/api/v1/auth/logout`;
 };
 
 /**

@@ -31,7 +31,7 @@ export type healthCheckHealthGetResponseSuccess = healthCheckHealthGetResponse20
 export type healthCheckHealthGetResponse = healthCheckHealthGetResponseSuccess;
 
 export const getHealthCheckHealthGetUrl = () => {
-  return `/health`;
+  return `http://localhost:8000/health`;
 };
 
 /**
@@ -52,7 +52,7 @@ export const healthCheckHealthGet = async (
 };
 
 export const getHealthCheckHealthGetQueryKey = () => {
-  return [`/health`] as const;
+  return [`http://localhost:8000/health`] as const;
 };
 
 export const getHealthCheckHealthGetQueryOptions = <

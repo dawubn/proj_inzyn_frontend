@@ -42,7 +42,7 @@ export type getMeApiV1UsersMeGetResponse =
   | getMeApiV1UsersMeGetResponseError;
 
 export const getGetMeApiV1UsersMeGetUrl = () => {
-  return `/api/v1/users/me`;
+  return `http://localhost:8000/api/v1/users/me`;
 };
 
 /**
@@ -63,7 +63,7 @@ export const getMeApiV1UsersMeGet = async (
 };
 
 export const getGetMeApiV1UsersMeGetQueryKey = () => {
-  return [`/api/v1/users/me`] as const;
+  return [`http://localhost:8000/api/v1/users/me`] as const;
 };
 
 export const getGetMeApiV1UsersMeGetQueryOptions = <
@@ -191,7 +191,7 @@ export type getUserApiV1UsersUserIdGetResponse =
   | getUserApiV1UsersUserIdGetResponseError;
 
 export const getGetUserApiV1UsersUserIdGetUrl = (userId: string) => {
-  return `/api/v1/users/${userId}`;
+  return `http://localhost:8000/api/v1/users/${userId}`;
 };
 
 /**
@@ -213,7 +213,7 @@ export const getUserApiV1UsersUserIdGet = async (
 };
 
 export const getGetUserApiV1UsersUserIdGetQueryKey = (userId: string) => {
-  return [`/api/v1/users/${userId}`] as const;
+  return [`http://localhost:8000/api/v1/users/${userId}`] as const;
 };
 
 export const getGetUserApiV1UsersUserIdGetQueryOptions = <

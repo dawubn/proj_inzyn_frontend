@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import Home from './pages/Home';
 import Register from './pages/Registration';
@@ -6,8 +7,28 @@ import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import { useAuthContext } from '@/context/auth-context';
+import { useGetMeApiV1UsersMeGet } from '@/api/generated/users/users';
 
 function App() {
+  const authContext = useAuthContext();
+  const { data: user } = useGetMeApiV1UsersMeGet({ query: { enabled: false } });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/users/me`, {
+          credentials: 'include',
+        });
+        authContext?.setIsAuthenticated(response.ok);
+      } catch {
+        authContext?.setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
