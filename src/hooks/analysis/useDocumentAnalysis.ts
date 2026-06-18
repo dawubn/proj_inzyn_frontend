@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadDocument, startDocumentAnalysis } from '@/api/documentApi/documentApi';
+import { uploadDocument, startDocumentAnalysis } from '@/api/documents-wrapper';
 
 export function useDocumentAnalysis() {
   const queryClient = useQueryClient();

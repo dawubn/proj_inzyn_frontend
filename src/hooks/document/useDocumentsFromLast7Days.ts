@@ -1,7 +1,7 @@
 // src/hooks/documents/useDocumentsFromLast7Days.ts
 import { useQuery } from '@tanstack/react-query';
-import type { DocumentResponse } from '@/api/documentApi/documentApi.types';
-import { fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
+import type { DocumentResponse } from '@/api/generated/model';
+import { fetchDocumentsFromLast7Days } from '@/api/documents-wrapper';
 
 export function useDocumentsFromLast7Days() {
   return useQuery<DocumentResponse[], Error>({

@@ -1,7 +1,7 @@
 //src/hooks/analysis/useFileSelection.ts
 
 import { useState } from 'react';
-import { validateFiles } from '@/api/documentApi/documentApi.Service';
+import { validateFiles } from '@/api/documents-wrapper';
 
 export type FileEntry = {
   id: string;

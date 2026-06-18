@@ -5,6 +5,7 @@ import { Outlet } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ArrowLeft, User, LogOut } from 'lucide-react';
 
 import { useMe } from '@/hooks/auth/useMe';
+import { useLogout } from '@/api/auth-wrapper';
 import { useAppNavigation, menuItems } from '@/hooks/navigation/useAppNavigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -27,12 +28,23 @@ type MenuButtonProps = {
 export default function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { data: user } = useMe();
-  const { navigate, currentPath, breadcrumbs, handleLogout } = useAppNavigation();
+  const { navigate, currentPath, breadcrumbs } = useAppNavigation();
+  const logoutMutation = useLogout();
 
-  function logout() {
-    handleLogout();
+  function handleLogoutClick() {
+    logoutMutation.mutate();
     setIsSidebarOpen(false);
   }
+
+  const formatRole = (role) => {
+    if (!role?.trim()) return '—';
+
+    return role
+      .trim()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   function renderMenuButton({ label, path, icon: Icon }: MenuButtonProps) {
     const isActive = currentPath === path;
@@ -44,9 +56,8 @@ export default function AppLayout() {
           navigate(path);
           setIsSidebarOpen(false);
         }}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-          isActive ? 'bg-gray-100 text-black' : 'text-gray-600 hover:bg-gray-50 hover:text-black'
-        }`}
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${isActive ? 'bg-gray-100 text-black' : 'text-gray-600 hover:bg-gray-50 hover:text-black'
+          }`}
       >
         <Icon size={16} />
         {label}
@@ -129,7 +140,7 @@ export default function AppLayout() {
 
                 <div>
                   <p className="text-sm font-medium">{user?.email ?? '—'}</p>
-                  <p className="text-xs text-gray-500">User account</p>
+                  <p className="text-xs text-gray-500">{formatRole(user?.role)}</p>
                 </div>
               </div>
             </SheetHeader>
@@ -154,11 +165,12 @@ export default function AppLayout() {
 
             <div className="absolute bottom-6 left-6 right-6">
               <Button
-                onClick={logout}
-                className="w-full cursor-pointer bg-black text-white hover:bg-black/90"
+                onClick={handleLogoutClick}
+                disabled={logoutMutation.isPending}
+                className="w-full cursor-pointer bg-black text-white hover:bg-black/90 disabled:opacity-50"
               >
                 <LogOut size={16} />
-                Log out
+                {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
               </Button>
             </div>
           </SheetContent>

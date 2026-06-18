@@ -1,7 +1,7 @@
 // src/hooks/documents/useStartDocumentAnalysis.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AnalysisResponse } from '@/api/documentApi/documentApi.types';
-import { startDocumentAnalysis } from '@/api/documentApi/documentApi';
+import type { AnalysisResponse } from '@/api/documents-wrapper';
+import { startDocumentAnalysis } from '@/api/documents-wrapper';
 
 export function useStartDocumentAnalysis() {
   const queryClient = useQueryClient();

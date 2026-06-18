@@ -5,12 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/auth/useMe';
-import { fetchRecentDocuments, fetchDocumentsFromLast7Days } from '@/api/documentApi/documentApi';
-import {
-  getStatusConfig,
-  isProblem,
-  isDuringAnalysis,
-} from '@/api/documentApi/documentApi.Service';
+import { fetchRecentDocuments, fetchDocumentsFromLast7Days, getStatusConfig, isProblem, isDuringAnalysis } from '@/api/documents-wrapper';
 import { formatDate } from '@/lib/formatters';
 
 export default function Dashboard() {
@@ -36,7 +31,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
-      <div className="mx-auto flex w-full max-w-[1600px] flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
+      <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="max-w-full overflow-hidden text-2xl font-semibold tracking-tight text-[#111111] sm:max-w-[70%] sm:text-[32px]">
