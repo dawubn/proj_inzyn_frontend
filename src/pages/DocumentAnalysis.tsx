@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 
 import { useFileSelection } from '@/hooks/analysis/useFileSelection';
 import { useDocumentAnalysis } from '@/hooks/analysis/useDocumentAnalysis';
-import { MAXFILESCOUNT } from '@/api/documentApi/documentApi.types';
+import { MAX_FILES_COUNT } from '@/api/documentApi/documentApi.types';
 import { getTotalFileSize } from '@/api/documentApi/documentApi.Service';
 import { formatFileSize } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
@@ -104,7 +104,7 @@ export default function DocumentAnalysis() {
           </div>
 
           <p className="mt-2 text-center text-xs text-gray-600 sm:text-sm">
-            Supported formats: PDF, JPG, PNG · Max {MAXFILESCOUNT} files
+            Supported formats: PDF, JPG, PNG · Max {MAX_FILES_COUNT} files
           </p>
 
           {fileEntries.length > 0 && (
