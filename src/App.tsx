@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
+import AnalysisResult from './pages/AnalysisResults';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 
@@ -40,6 +41,8 @@ function App() {
             path="/history/analysis-details"
             element={<div>Analysis Details - temporary for breadcrumbs testing</div>}
           />
+
+          <Route path="/analysis-result" element={<AnalysisResult />} />
         </Route>
       </Routes>
     </BrowserRouter>
