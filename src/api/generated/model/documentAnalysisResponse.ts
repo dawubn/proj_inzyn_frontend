@@ -7,10 +7,15 @@
  */
 import type { AnalysisStatus } from './analysisStatus';
 import type { DocumentAnalysisResponseExtractedFields } from './documentAnalysisResponseExtractedFields';
+import type { DocumentAnalysisResponseIrregularitiesCount } from './documentAnalysisResponseIrregularitiesCount';
 import type { DocumentAnalysisResponseLegalAnalysisResult } from './documentAnalysisResponseLegalAnalysisResult';
 import type { DocumentAnalysisResponseOcrRawResult } from './documentAnalysisResponseOcrRawResult';
+import type { DocumentAnalysisResponseTesseractWords } from './documentAnalysisResponseTesseractWords';
 import type { ProcessingStage } from './processingStage';
 
+/**
+ * Full response with detailed results (for detail endpoint).
+ */
 export interface DocumentAnalysisResponse {
   created_at: string;
   updated_at: string;
@@ -21,10 +26,13 @@ export interface DocumentAnalysisResponse {
   processing_stage: ProcessingStage;
   processing_step: number;
   ocr_provider: string | null;
-  ocr_raw_result: DocumentAnalysisResponseOcrRawResult;
+  ocr_scale: number;
   detected_document_type: string | null;
   classification_confidence: number | null;
-  extracted_fields: DocumentAnalysisResponseExtractedFields;
-  legal_analysis_result: DocumentAnalysisResponseLegalAnalysisResult;
   error_message: string | null;
+  tesseract_words: DocumentAnalysisResponseTesseractWords;
+  legal_analysis_result?: DocumentAnalysisResponseLegalAnalysisResult;
+  ocr_raw_result: DocumentAnalysisResponseOcrRawResult;
+  extracted_fields: DocumentAnalysisResponseExtractedFields;
+  readonly irregularities_count: DocumentAnalysisResponseIrregularitiesCount;
 }

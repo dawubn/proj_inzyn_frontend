@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
+import AnalysisDetails from './pages/AnalysisDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
@@ -57,10 +58,7 @@ function App() {
 
           <Route path="/account-details" element={<div>Account details</div>} />
 
-          <Route
-            path="/history/analysis-details"
-            element={<div>Analysis Details - temporary for breadcrumbs testing</div>}
-          />
+          <Route path="/analysis/:analysisId" element={<AnalysisDetails />} />
         </Route>
       </Routes>
     </BrowserRouter>

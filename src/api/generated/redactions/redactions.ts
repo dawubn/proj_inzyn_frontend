@@ -27,6 +27,7 @@ import type {
   BodyTriggerFullOcrApiV1RedactionsFullOcrPost,
   BodyTriggerLegalAnalysisApiV1RedactionsLegalAnalysisPost,
   BodyTriggerLocalOcrAsyncApiV1RedactionsLocalOcrPost,
+  DocumentAnalysisListResponse,
   DocumentAnalysisResponse,
   HTTPValidationError,
   RedactLocalOcrApiV1RedactionsPostParams,
@@ -209,7 +210,7 @@ export const useRedactLocalOcrApiV1RedactionsPost = <
   return useMutation(getRedactLocalOcrApiV1RedactionsPostMutationOptions(options), queryClient);
 };
 export type listRedactionsApiV1RedactionsGetResponse200 = {
-  data: DocumentAnalysisResponse[];
+  data: DocumentAnalysisListResponse[];
   status: 200;
 };
 

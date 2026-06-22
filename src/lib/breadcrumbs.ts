@@ -31,5 +31,13 @@ const breadcrumbMap: Record<string, Breadcrumb[]> = {
 };
 
 export function getBreadcrumbs(pathname: string): Breadcrumb[] {
+  // Handle dynamic routes
+  if (pathname.startsWith('/analysis/')) {
+    return [
+      { label: 'Dashboard', path: '/dashboard' },
+      { label: 'Analysis details', path: pathname },
+    ];
+  }
+
   return breadcrumbMap[pathname] ?? [{ label: 'Dashboard', path: '/dashboard' }];
 }

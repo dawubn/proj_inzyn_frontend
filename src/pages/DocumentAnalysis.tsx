@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 
@@ -17,9 +18,10 @@ import {
 } from '@/components/ui/select';
 
 export default function DocumentAnalysis() {
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedDocId, setSelectedDocId] = useState('');
-  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState('');
 
@@ -36,7 +38,7 @@ export default function DocumentAnalysis() {
     handleRemoveFile,
   } = useFileSelection();
 
-  const { isProcessing, progress, isPending, startAnalysis } = useDocumentAnalysis();
+  const { isProcessing, progress, isPending, startAnalysis, analysisId } = useDocumentAnalysis();
 
   // Fetch documents with infinite scroll
   const {
@@ -75,11 +77,20 @@ export default function DocumentAnalysis() {
     };
   }, [hasNextPage, fetchNextPage]);
 
-  // Poll analysis status
+  // Current analysis ID (from either upload or button)
+  const currentAnalysisId = analysisId || selectedAnalysisId;
+
+  // Handle button-triggered analysis
+  const handleSetAnalysisId = (id: string) => {
+    setSelectedAnalysisId(id);
+    setIsAnalyzing(true);
+  };
+
+  // Poll analysis status (for both button-triggered and file-upload-triggered analyses)
   const { data: analysisStatus } = useQuery({
-    queryKey: ['analysis-status', analysisId],
-    queryFn: () => getAnalysisStatus(analysisId!),
-    enabled: !!analysisId && isAnalyzing,
+    queryKey: ['analysis-status', currentAnalysisId],
+    queryFn: () => getAnalysisStatus(currentAnalysisId!),
+    enabled: !!currentAnalysisId,
     refetchInterval: 3000,
     refetchIntervalInBackground: true,
     staleTime: 0,
@@ -88,11 +99,18 @@ export default function DocumentAnalysis() {
   // Update analyzing state based on analysis status
   useEffect(() => {
     if (analysisStatus) {
-      if (analysisStatus.status === 'completed' || analysisStatus.status === 'failed') {
+      if (analysisStatus.status === 'completed' || analysisStatus.status.includes('failed')) {
         setIsAnalyzing(false);
       }
     }
   }, [analysisStatus]);
+
+  // Navigate to analysis details when completed
+  useEffect(() => {
+    if (analysisStatus?.status === 'completed' && currentAnalysisId) {
+      navigate(`/analysis/${currentAnalysisId}`);
+    }
+  }, [analysisStatus?.status, currentAnalysisId, navigate]);
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
@@ -111,45 +129,24 @@ export default function DocumentAnalysis() {
 
     try {
       setAnalysisError('');
-      setIsAnalyzing(true);
       const result = await triggerLegalAnalysis(selectedDocId);
-      setAnalysisId(result.analysis_id);
+      handleSetAnalysisId(result.analysis_id);
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : 'Failed to trigger analysis');
       setIsAnalyzing(false);
     }
   }
 
-  // Upload processing screen
-  if (isProcessing && selectedFiles.length > 0) {
-    return (
-      <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
-        <div className="w-full max-w-md text-center">
-          <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl">Document Processing</h1>
-
-          <div className="mx-auto mt-6 rounded-xl border border-[#E5E5E5] bg-white px-6 py-4 sm:mt-10 sm:px-8 sm:py-5">
-            <p className="text-base font-bold sm:text-xl">{selectedFiles.length} selected files</p>
-            <p className="text-base font-bold sm:text-xl">{getTotalFileSize(selectedFiles)}</p>
-          </div>
-
-          <p className="mt-6 text-sm font-semibold sm:mt-8">{progress}%</p>
-
-          <Progress value={progress} className="mt-3 h-3 bg-gray-200 [&>div]:bg-slate-950" />
-
-          <p className="mt-5 text-sm text-gray-700">Your documents are being analyzed...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Legal analysis processing screen
-  if (isAnalyzing) {
-    const progressPercent = analysisStatus?.processing_step ? (analysisStatus.processing_step / 4) * 100 : 0;
+  // Legal analysis processing screen (for both upload and button flows)
+  if (currentAnalysisId && !analysisStatus?.status?.includes('completed')) {
+    const progressPercent = analysisStatus?.processing_step ? Math.min((analysisStatus.processing_step / 4) * 100, 95) : 0;
     const stageLabel = analysisStatus?.processing_stage ? {
+      pending: 'Starting analysis',
       local_ocr: 'Local OCR',
       redaction: 'Redaction',
       azure_ocr: 'Azure OCR',
-      llm: 'Legal Analysis',
+      llm_analysis: 'Legal Analysis',
+      completed: 'Completed',
     }[analysisStatus.processing_stage as string] || analysisStatus.processing_stage : 'Preparing...';
 
     return (
@@ -172,40 +169,8 @@ export default function DocumentAnalysis() {
     );
   }
 
-  // Analysis completed screen
-  if (analysisStatus && analysisStatus.status === 'completed') {
-    return (
-      <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
-        <div className="w-full max-w-2xl">
-          <Card className="border border-[#E5E5E5] bg-[#F5F5F5] shadow-sm ring-0">
-            <CardContent className="px-4 py-5 sm:px-8 sm:py-7">
-              <h1 className="text-2xl font-bold sm:text-3xl">Analysis Complete</h1>
-
-              <div className="mt-6 rounded-xl border border-[#E5E5E5] bg-white p-6">
-                <h2 className="text-lg font-semibold mb-4">Legal Analysis Results</h2>
-                <pre className="bg-gray-100 p-4 rounded overflow-auto max-h-96 text-sm">
-                  {JSON.stringify(analysisStatus.legal_analysis_result, null, 2)}
-                </pre>
-              </div>
-
-              <Button
-                onClick={() => {
-                  setAnalysisId(null);
-                  setSelectedDocId('');
-                }}
-                className="mt-6 w-full bg-slate-950 text-white hover:bg-slate-900"
-              >
-                Analyze Another Document
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   // Analysis failed screen
-  if (analysisStatus && analysisStatus.status === 'failed') {
+  if (analysisStatus && analysisStatus.status.includes('failed')) {
     return (
       <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
         <div className="w-full max-w-2xl">
@@ -214,12 +179,13 @@ export default function DocumentAnalysis() {
               <h1 className="text-2xl font-bold text-red-900 sm:text-3xl">Analysis Failed</h1>
 
               <div className="mt-6 rounded-xl border border-red-300 bg-white p-6">
+                <p className="text-red-700 text-sm mb-2"><strong>Stage:</strong> {analysisStatus.processing_stage}</p>
                 <p className="text-red-700">{analysisStatus.error_message || 'Unknown error occurred'}</p>
               </div>
 
               <Button
                 onClick={() => {
-                  setAnalysisId(null);
+                  setSelectedAnalysisId(null);
                   setSelectedDocId('');
                 }}
                 className="mt-6 w-full bg-red-600 text-white hover:bg-red-700"
@@ -303,13 +269,15 @@ export default function DocumentAnalysis() {
                 </div>
               </div>
 
-              <Button
-                onClick={handleStartAnalysis}
-                disabled={isPending}
-                className="mx-auto mt-6 w-full max-w-sm bg-black text-white hover:bg-gray-800"
-              >
-                {isPending ? 'Processing...' : 'Analyze Documents'}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleStartAnalysis}
+                  disabled={isPending}
+                  className="mt-6 w-full max-w-sm bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {isPending ? 'Processing...' : 'Analyze Documents'}
+                </Button>
+              </div>
             </>
           )}
 

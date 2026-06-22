@@ -1,6 +1,6 @@
 import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
 import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { triggerLocalOcrAsyncApiV1RedactionsLocalOcrPost, listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
+import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -78,6 +78,13 @@ export const STATUS_CONFIG_MAP = {
   pending: { label: 'Queued', color: 'text-[#D97706]' },
   failed: { label: 'Problem with execution', color: 'text-[#B91C1C]' },
   archived: { label: 'Archived', color: 'text-[#6B7280]' },
+  completed: { label: 'Completed', color: 'text-[#65A30D]' },
+  in_progress: { label: 'In progress', color: 'text-[#0284C7]' },
+  ocr_in_progress: { label: 'OCR in progress', color: 'text-[#0284C7]' },
+  ocr_completed: { label: 'OCR completed', color: 'text-[#65A30D]' },
+  ocr_failed: { label: 'OCR failed', color: 'text-[#B91C1C]' },
+  classifying: { label: 'Classifying', color: 'text-[#0284C7]' },
+  validating: { label: 'Validating', color: 'text-[#0284C7]' },
 } as const;
 
 export type KnownStatus = keyof typeof STATUS_CONFIG_MAP;
@@ -119,7 +126,7 @@ export async function uploadDocument(file: File): Promise<UploadedDocumentRespon
 }
 
 export async function startDocumentAnalysis(documentId: string): Promise<AnalysisResponse> {
-  const response = await triggerLocalOcrAsyncApiV1RedactionsLocalOcrPost(
+  const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
     { credentials: 'include' }
@@ -131,7 +138,7 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
 
   const analysis = response.data as any;
   return {
-    id: analysis.id || documentId,
+    id: analysis.analysis_id || documentId,
     status: analysis.status,
   };
 }

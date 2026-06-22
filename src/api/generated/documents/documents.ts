@@ -936,3 +936,222 @@ export function useListAllDocumentsAdminApiV1DocumentsAdminAllGet<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse200 = {
+  data: unknown;
+  status: 200;
+};
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse401 = {
+  data: void;
+  status: 401;
+};
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse404 = {
+  data: void;
+  status: 404;
+};
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponseSuccess =
+  downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse200 & {
+    headers: Headers;
+  };
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponseError = (
+  | downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse401
+  | downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse404
+  | downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse422
+) & {
+  headers: Headers;
+};
+
+export type downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse =
+  | downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponseSuccess
+  | downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponseError;
+
+export const getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetUrl = (documentId: string) => {
+  return `http://localhost:8000/api/v1/documents/${documentId}/download`;
+};
+
+/**
+ * Download/view document file.
+ *
+ * Only document owner or admin can download.
+ * Returns binary file content for display or download in frontend.
+ * @summary Download Document
+ */
+export const downloadDocumentApiV1DocumentsDocumentIdDownloadGet = async (
+  documentId: string,
+  options?: RequestInit,
+): Promise<downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse> => {
+  const res = await fetch(getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetUrl(documentId), {
+    ...options,
+    method: 'GET',
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse['data'] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as downloadDocumentApiV1DocumentsDocumentIdDownloadGetResponse;
+};
+
+export const getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryKey = (
+  documentId: string,
+) => {
+  return [`http://localhost:8000/api/v1/documents/${documentId}/download`] as const;
+};
+
+export const getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+  TError = void | HTTPValidationError,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+        TError,
+        TData
+      >
+    >;
+    fetch?: RequestInit;
+  },
+) => {
+  const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryKey(documentId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>
+  > = ({ signal }) =>
+    downloadDocumentApiV1DocumentsDocumentIdDownloadGet(documentId, { signal, ...fetchOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: documentId !== null && documentId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>
+>;
+export type DownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryError =
+  void | HTTPValidationError;
+
+export function useDownloadDocumentApiV1DocumentsDocumentIdDownloadGet<
+  TData = Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+  TError = void | HTTPValidationError,
+>(
+  documentId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>
+        >,
+        'initialData'
+      >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentApiV1DocumentsDocumentIdDownloadGet<
+  TData = Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+  TError = void | HTTPValidationError,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+          TError,
+          Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>
+        >,
+        'initialData'
+      >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadDocumentApiV1DocumentsDocumentIdDownloadGet<
+  TData = Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+  TError = void | HTTPValidationError,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+        TError,
+        TData
+      >
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Download Document
+ */
+
+export function useDownloadDocumentApiV1DocumentsDocumentIdDownloadGet<
+  TData = Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+  TError = void | HTTPValidationError,
+>(
+  documentId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadDocumentApiV1DocumentsDocumentIdDownloadGet>>,
+        TError,
+        TData
+      >
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadDocumentApiV1DocumentsDocumentIdDownloadGetQueryOptions(
+    documentId,
+    options,
+  );
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
