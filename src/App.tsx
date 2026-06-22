@@ -9,11 +9,9 @@ import AnalysisDetails from './pages/AnalysisDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
-import { useGetMeApiV1UsersMeGet } from '@/api/generated/users/users';
 
 function App() {
   const authContext = useAuthContext();
-  const { data: user } = useGetMeApiV1UsersMeGet({ query: { enabled: false } });
 
   useEffect(() => {
     const checkAuth = async () => {

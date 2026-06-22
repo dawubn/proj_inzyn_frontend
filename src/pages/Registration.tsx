@@ -43,7 +43,7 @@ export default function Register() {
         role: 'business_user',
       });
 
-      await loginMutation.mutateAsync({ email, password });
+      await loginMutation.mutateAsync({ data: { email, password } });
       navigate('/dashboard');
     } catch {
       setError('Registration failed');

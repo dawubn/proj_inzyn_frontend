@@ -38,7 +38,7 @@ export default function DocumentAnalysis() {
     handleRemoveFile,
   } = useFileSelection();
 
-  const { isProcessing, progress, isPending, startAnalysis, analysisId } = useDocumentAnalysis();
+  const { isPending, startAnalysis, analysisId } = useDocumentAnalysis();
 
   // Fetch documents with infinite scroll
   const {

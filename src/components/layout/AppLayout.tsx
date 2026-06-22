@@ -36,13 +36,13 @@ export default function AppLayout() {
     setIsSidebarOpen(false);
   }
 
-  const formatRole = (role) => {
+  const formatRole = (role: string | undefined) => {
     if (!role?.trim()) return '—';
 
     return role
       .trim()
       .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   };
 

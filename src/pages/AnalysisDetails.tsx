@@ -9,13 +9,6 @@ import type { DocumentAnalysisResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 import 'tiff.js';
 
-interface BBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 const severityConfig = {
   critical: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
   high: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
@@ -50,12 +43,12 @@ export default function AnalysisDetails() {
 
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
 
-  const errors = (analysis?.legal_analysis_result?.errors as any[]) || [];
+  const errors = ((analysis?.legal_analysis_result as any)?.errors as any[]) || [];
 
-  const findBboxForError = (error: any) => {
+  const findBboxForError = (error: any): { x: number; y: number; width: number; height: number } | null => {
     const words = (analysis?.tesseract_words as any[]) || [];
     const textRef = error.text_reference.toLowerCase().trim();
-    const refWords = textRef.split(/[\s\n()/-]+/).filter(w => w.length > 2);
+    const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
 
     if (refWords.length === 0) {
       return null;
@@ -63,7 +56,7 @@ export default function AnalysisDetails() {
 
     // Find ALL words from tesseract_words that match any of the refWords
     const matchedWords: any[] = [];
-    const cleanedRefWords = refWords.map(w => w.replace(/[^\p{L}\p{N}]/gu, ''));
+    const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
 
     for (const word of words) {
       const wordText = word.text.toLowerCase();
@@ -214,10 +207,8 @@ export default function AnalysisDetails() {
     }
 
     // TODO: Fix highlight positioning - temporarily disabled
-    return;
-
-    // Draw all error highlights
-    enrichedErrors.forEach((error, idx) => {
+    /*
+    enrichedErrors.forEach((error: any, idx: number) => {
       const isHovered = hoveredErrorIndex === idx;
       const isSelected = selectedErrorIndex === idx;
 
@@ -231,7 +222,7 @@ export default function AnalysisDetails() {
         console.log('First error bbox:', error.bbox);
       }
 
-      const severity = error.severity;
+      const severity = error.severity as keyof typeof severityConfig;
       const baseOpacity = isHovered || isSelected ? 0.4 : 0.15;
       const strokeWidth = isHovered || isSelected ? 3 : 2;
 
@@ -253,13 +244,16 @@ export default function AnalysisDetails() {
       const color = colors[severity];
       const { x, y, width, height } = error.bbox;
 
-      ctx.fillStyle = color.fill;
-      ctx.fillRect(x, y, width, height);
+      if (ctx) {
+        ctx.fillStyle = color.fill;
+        ctx.fillRect(x, y, width, height);
 
-      ctx.strokeStyle = color.stroke;
-      ctx.lineWidth = strokeWidth;
-      ctx.strokeRect(x, y, width, height);
+        ctx.strokeStyle = color.stroke;
+        ctx.lineWidth = strokeWidth;
+        ctx.strokeRect(x, y, width, height);
+      }
     });
+    */
   }, [hoveredErrorIndex, selectedErrorIndex, enrichedErrors]);
 
   const copyToClipboard = (text: string) => {
@@ -402,9 +396,9 @@ export default function AnalysisDetails() {
 
               {/* Issues List */}
               <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                {filteredErrors.map((error, filteredIdx) => {
+                {filteredErrors.map((error: any, filteredIdx) => {
                   const originalIdx = enrichedErrors.indexOf(error);
-                  const config = severityConfig[error.severity];
+                  const config = severityConfig[error.severity as keyof typeof severityConfig];
                   const isHovered = hoveredErrorIndex === originalIdx;
                   const isSelected = selectedErrorIndex === originalIdx;
                   return (
@@ -433,12 +427,12 @@ export default function AnalysisDetails() {
           </Card>
 
           {/* Applicable Laws Card */}
-          {analysis?.legal_analysis_result?.applicable_laws && analysis.legal_analysis_result.applicable_laws.length > 0 && (
+          {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
             <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 <h3 className="font-semibold text-gray-900 mb-4">Applicable Laws</h3>
                 <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                  {analysis.legal_analysis_result.applicable_laws.map((law, idx) => (
+                  {((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map((law: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
                       <p className="font-medium text-sm text-gray-900">{law.law}</p>
                       <p className="text-xs text-gray-600 mt-1">{law.reference}</p>
@@ -454,12 +448,12 @@ export default function AnalysisDetails() {
         {/* Right Panel - Document Preview & Summary */}
         <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-hidden">
           {/* Summary */}
-          {analysis?.legal_analysis_result?.summary && (
+          {((analysis?.legal_analysis_result as any)?.summary as string) && (
             <Card className="border border-gray-200 bg-gray-50 flex-shrink-0 max-h-32 overflow-y-auto">
               <CardContent className="p-6">
                 <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  {analysis.legal_analysis_result.summary}
+                  {(analysis?.legal_analysis_result as any)?.summary}
                 </p>
               </CardContent>
             </Card>
