@@ -43,10 +43,13 @@ export default function AnalysisDetails() {
 
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
 
-  const errors = ((analysis?.legal_analysis_result as unknown)?.errors as unknown[]) || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const errors = ((analysis?.legal_analysis_result as any)?.errors as any[]) || [];
 
-  const findBboxForError = (error: unknown): { x: number; y: number; width: number; height: number } | null => {
-    const words = (analysis?.tesseract_words as unknown[]) || [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const findBboxForError = (error: any): { x: number; y: number; width: number; height: number } | null => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const words = (analysis?.tesseract_words as any[]) || [];
     const textRef = (error as any).text_reference.toLowerCase().trim();
     const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
 
@@ -55,7 +58,8 @@ export default function AnalysisDetails() {
     }
 
     // Find ALL words from tesseract_words that match any of the refWords
-    const matchedWords: unknown[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matchedWords: any[] = [];
     const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
 
     for (const word of words) {
@@ -123,7 +127,8 @@ export default function AnalysisDetails() {
         }
 
         const arrayBuffer = await response.arrayBuffer();
-        const Tiff = (window as unknown).Tiff;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Tiff = (window as any).Tiff;
         if (!Tiff) {
           throw new Error('Tiff library not loaded');
         }
@@ -396,7 +401,8 @@ export default function AnalysisDetails() {
 
               {/* Issues List */}
               <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                {filteredErrors.map((error: unknown, filteredIdx) => {
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {filteredErrors.map((error: any, filteredIdx) => {
                   const originalIdx = enrichedErrors.indexOf(error);
                   const config = severityConfig[error.severity as keyof typeof severityConfig];
                   const isHovered = hoveredErrorIndex === originalIdx;
@@ -427,7 +433,8 @@ export default function AnalysisDetails() {
           </Card>
 
           {/* Applicable Laws Card */}
-          {((analysis?.legal_analysis_result as unknown)?.applicable_laws as unknown[])?.length > 0 && (
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
             <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 <h3 className="font-semibold text-gray-900 mb-4">Applicable Laws</h3>

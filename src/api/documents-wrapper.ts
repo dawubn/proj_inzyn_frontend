@@ -136,7 +136,8 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
     throw new Error('Document analysis failed');
   }
 
-  const analysis = response.data as unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const analysis = response.data as any;
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
