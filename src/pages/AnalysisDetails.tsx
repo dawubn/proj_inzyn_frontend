@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -44,10 +44,13 @@ export default function AnalysisDetails() {
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const errors = ((analysis?.legal_analysis_result as any)?.errors as any[]) || [];
+  const errors = useMemo(
+    () => ((analysis?.legal_analysis_result as any)?.errors as any[]) || [],
+    [analysis?.legal_analysis_result]
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const findBboxForError = (error: any): { x: number; y: number; width: number; height: number } | null => {
+  const findBboxForError = useCallback((error: any): { x: number; y: number; width: number; height: number } | null => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const words = (analysis?.tesseract_words as any[]) || [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -92,7 +95,7 @@ export default function AnalysisDetails() {
       width: maxX - minX,
       height: maxY - minY
     };
-  };
+  }, [analysis?.tesseract_words]);
 
   const enrichedErrors = useMemo(() => {
     return errors.map((error) => ({
@@ -441,7 +444,9 @@ export default function AnalysisDetails() {
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 <h3 className="font-semibold text-gray-900 mb-4">Applicable Laws</h3>
                 <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                  {((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map(
+                  {(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    ((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     (law: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
@@ -459,11 +464,13 @@ export default function AnalysisDetails() {
         {/* Right Panel - Document Preview & Summary */}
         <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-hidden">
           {/* Summary */}
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.summary as string) && (
             <Card className="border border-gray-200 bg-gray-50 flex-shrink-0 max-h-32 overflow-y-auto">
               <CardContent className="p-6">
                 <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
                 <p className="text-sm text-gray-700 leading-relaxed">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {(analysis?.legal_analysis_result as any)?.summary}
                 </p>
               </CardContent>
