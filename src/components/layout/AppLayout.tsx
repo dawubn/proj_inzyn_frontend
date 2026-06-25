@@ -178,7 +178,7 @@ export default function AppLayout() {
       </header>
 
       <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-        <div className="rounded-sm bg-white lg:h-full">
+        <div className="rounded-sm bg-white lg:h-full lg:overflow-hidden">
           <Outlet />
         </div>
       </main>
