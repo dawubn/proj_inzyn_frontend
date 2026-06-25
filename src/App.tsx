@@ -6,6 +6,8 @@ import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import AnalysisDetails from './pages/AnalysisDetails';
+import AnalysisHistory from '@/pages/AnalysisHistory';
+
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
@@ -49,7 +51,7 @@ function App() {
         >
           <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route path="/history" element={<div>History of analysis</div>} />
+          <Route path="/history" element={<AnalysisHistory />} />
 
           <Route path="/document-analysis" element={<DocumentAnalysis />} />
 
