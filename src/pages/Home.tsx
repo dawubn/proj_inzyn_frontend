@@ -43,6 +43,7 @@ export default function Home() {
   }
 
   if (authContext?.isAuthenticated === true) {
+    navigate('/dashboard');
     return null;
   }
 
