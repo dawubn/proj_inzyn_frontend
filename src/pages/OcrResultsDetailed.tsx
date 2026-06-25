@@ -157,7 +157,11 @@ export default function OcrResultsDetailed() {
           </div>
           <div>
             <span className="text-gray-600">Provider:</span>
-            <span className="font-semibold text-gray-900 ml-2">{analysis?.ocr_provider || 'Unknown'}</span>
+            <span className="font-semibold text-gray-900 ml-2">
+              {analysis?.ocr_provider
+                ? analysis.ocr_provider.charAt(0).toUpperCase() + analysis.ocr_provider.slice(1)
+                : 'Unknown'}
+            </span>
           </div>
         </div>
       </div>
@@ -236,9 +240,9 @@ export default function OcrResultsDetailed() {
                     </>
                   )}
 
-                  {/* Azure Form Recognizer v3 - pages with lines */}
+                  {/* Azure Document Intelligence v4 & Form Recognizer v3 - pages with lines & words */}
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {((ocrResult.analyzeResult?.readResults || ocrResult.readResults || (Array.isArray(ocrResult) ? ocrResult : null)) as any[])?.map((page: any, pageIdx: number) => (
+                  {((ocrResult.pages || ocrResult.analyzeResult?.readResults || ocrResult.readResults || (Array.isArray(ocrResult) ? ocrResult : null)) as any[])?.map((page: any, pageIdx: number) => (
                     <div key={pageIdx} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="font-semibold text-gray-900">Page {pageIdx + 1}</h3>
