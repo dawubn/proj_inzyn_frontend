@@ -9,19 +9,6 @@ import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentAp
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
 
-interface Analysis {
-  id: string;
-  document_id: string;
-  status: string;
-  created_at: string;
-  processing_stage?: string;
-  irregularities_count?: {
-    critical?: number;
-    high?: number;
-    medium?: number;
-  };
-}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useMe();
