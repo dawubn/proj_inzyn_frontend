@@ -197,7 +197,7 @@ export default function OcrResultsDetailed() {
 
           {/* Detailed Breakdown - Page Breakdown */}
           {ocrResult && (
-            <Card className="border border-gray-200 bg-white shadow-none">
+            <Card className="border border-gray-200 bg-white shadow-none mb-6">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">
                   {Array.isArray(ocrResult.pages) ? 'Page Breakdown' : 'Content Breakdown'}
@@ -249,8 +249,8 @@ export default function OcrResultsDetailed() {
             <Card className="border border-gray-200 bg-white shadow-none">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Raw OCR</h2>
-                <div className="bg-gray-900 p-4 rounded border border-gray-700 max-h-96 overflow-auto">
-                  <pre className="text-xs text-gray-100 font-mono whitespace-pre-wrap break-words">
+                <div className="bg-gray-900 p-4 rounded border border-gray-700 overflow-x-auto">
+                  <pre className="text-xs text-gray-100 font-mono whitespace-pre">
                     {JSON.stringify(ocrResult, null, 2)}
                   </pre>
                 </div>
