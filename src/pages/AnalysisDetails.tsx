@@ -43,8 +43,8 @@ export default function AnalysisDetails() {
 
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const errors = useMemo(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     () => ((analysis?.legal_analysis_result as any)?.errors as any[]) || [],
     [analysis?.legal_analysis_result]
   );

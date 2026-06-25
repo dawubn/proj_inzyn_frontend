@@ -66,13 +66,14 @@ export default function DocumentAnalysis() {
       { threshold: 0.1 }
     );
 
-    if (lastDocumentRef.current) {
-      observer.observe(lastDocumentRef.current);
+    const currentRef = lastDocumentRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (lastDocumentRef.current) {
-        observer.unobserve(lastDocumentRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
   }, [hasNextPage, fetchNextPage]);

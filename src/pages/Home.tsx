@@ -36,7 +36,7 @@ export default function Home() {
         logout();
       }
     }
-  }, []);
+  }, [authContext]);
 
   if (authContext?.isAuthenticated === null) {
     return null;
