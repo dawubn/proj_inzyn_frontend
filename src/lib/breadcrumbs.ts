@@ -31,6 +31,16 @@ const breadcrumbMap: Record<string, Breadcrumb[]> = {
 };
 
 export function getBreadcrumbs(pathname: string): Breadcrumb[] {
+  // Handle OCR results route
+  if (pathname.includes('/analysis/') && pathname.endsWith('/ocr')) {
+    const analysisId = pathname.split('/')[2];
+    return [
+      { label: 'Dashboard', path: '/dashboard' },
+      { label: 'Analysis details', path: `/analysis/${analysisId}` },
+      { label: 'Extracted Text', path: pathname },
+    ];
+  }
+
   // Handle dynamic routes
   if (pathname.startsWith('/analysis/')) {
     return [

@@ -370,7 +370,7 @@ export default function AnalysisDetails() {
               onClick={() => navigate(`/analysis/${analysisId}/ocr`)}
             >
               <FileText size={16} />
-              View OCR Results
+              View Extracted Text
             </Button>
             <Button
               variant="outline"

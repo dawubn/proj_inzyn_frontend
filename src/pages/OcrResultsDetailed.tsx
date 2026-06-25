@@ -134,7 +134,7 @@ export default function OcrResultsDetailed() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(`/analysis/${analysisId}/ocr`)}
+              onClick={() => navigate(`/analysis/${analysisId}`)}
               className="p-2 hover:bg-gray-100 rounded-lg transition"
             >
               <ArrowLeft size={20} className="text-gray-600" />
