@@ -240,44 +240,37 @@ export default function OcrResultsDetailed() {
                     </>
                   )}
 
-                  {/* Azure Document Intelligence v4 & Form Recognizer v3 - pages with lines & words */}
+                  {/* Azure Document Intelligence v4 & Form Recognizer v3 - pretty pages structure */}
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {((ocrResult.pages || ocrResult.analyzeResult?.readResults || ocrResult.readResults || (Array.isArray(ocrResult) ? ocrResult : null)) as any[])?.map((page: any, pageIdx: number) => (
-                    <div key={pageIdx} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">Page {pageIdx + 1}</h3>
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                          {page.lines?.length || 0} lines
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
+                    <div key={pageIdx} className="mb-8">
+                      <h3 className="text-lg font-semibold mb-4 text-gray-900">Page {pageIdx + 1}</h3>
+                      <div className="space-y-4">
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         {page.lines?.map((line: any, lineIdx: number) => (
-                          <div
-                            key={lineIdx}
-                            className="bg-gray-50 p-3 rounded border-l-4 border-blue-300"
-                          >
-                            <p className="text-gray-900 text-sm leading-relaxed">{line.text}</p>
+                          <div key={lineIdx} className="bg-gray-50 p-4 rounded border border-gray-200">
+                            <div className="mb-2">
+                              <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                Line {lineIdx + 1}
+                              </span>
+                            </div>
+                            <p className="text-gray-900 font-medium">{line.text}</p>
                             {line.words && (
-                              <div className="mt-2 pt-2 border-t border-gray-200">
-                                <div className="text-xs text-gray-600 mb-1 font-medium">
-                                  Confidence:
-                                </div>
-                                <div className="flex flex-wrap gap-1">
+                              <div className="mt-3 pt-3 border-t border-gray-300">
+                                <div className="text-xs font-semibold text-gray-600 mb-2">Word-by-word:</div>
+                                <div className="flex flex-wrap gap-2">
                                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                   {line.words.map((word: any, wordIdx: number) => (
                                     <span
                                       key={wordIdx}
-                                      className={`text-xs px-1.5 py-0.5 rounded ${
-                                        word.confidence >= 0.9
-                                          ? 'bg-green-100 text-green-800'
-                                          : word.confidence >= 0.7
-                                          ? 'bg-yellow-100 text-yellow-800'
-                                          : 'bg-red-100 text-red-800'
-                                      }`}
+                                      className="bg-white border border-gray-300 px-2 py-1 rounded text-xs text-gray-700"
                                     >
-                                      {word.text} ({Math.round(word.confidence * 100)}%)
+                                      {word.text}
+                                      {word.confidence !== undefined && (
+                                        <span className="text-gray-500 ml-1">
+                                          ({Math.round(word.confidence * 100)}%)
+                                        </span>
+                                      )}
                                     </span>
                                   ))}
                                 </div>
