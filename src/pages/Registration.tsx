@@ -36,15 +36,29 @@ export default function Register() {
     }
 
     try {
-      await registerMutation.mutateAsync({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const regResponse = await registerMutation.mutateAsync({
         email,
         password,
         full_name: fullName.trim(),
         role: 'business_user',
-      });
+      }) as any;
 
-      await loginMutation.mutateAsync({ data: { email, password } });
-      navigate('/dashboard');
+      if (regResponse?.status === 409) {
+        setError('An account with this email already exists.');
+        return;
+      }
+      if ((regResponse?.status as number) !== 201) {
+        setError(regResponse?.data?.detail || 'Registration failed');
+        return;
+      }
+
+      const loginResponse = await loginMutation.mutateAsync({ data: { email, password } });
+      if ((loginResponse.status as number) === 200 || loginResponse.status === 204) {
+        navigate('/dashboard');
+      } else {
+        setError('Registration succeeded but login failed. Please log in manually.');
+      }
     } catch {
       setError('Registration failed');
     }
