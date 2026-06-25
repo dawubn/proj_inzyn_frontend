@@ -6,6 +6,8 @@ import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import AnalysisDetails from './pages/AnalysisDetails';
+import AnalysisHistory from '@/pages/AnalysisHistory';
+
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
