@@ -30,7 +30,7 @@ export default function AnalysisDetails() {
   const [totalPages, setTotalPages] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const tiffRef = useRef<any>(null);
+  const tiffRef = useRef<unknown>(null);
 
   const { data: analysisData, isLoading } = useGetRedactionApiV1RedactionsAnalysisIdGet(
     analysisId || '',

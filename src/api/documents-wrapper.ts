@@ -136,7 +136,7 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
     throw new Error('Document analysis failed');
   }
 
-  const analysis = response.data as any;
+  const analysis = response.data as unknown;
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
@@ -164,13 +164,13 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
   return Array.from(documentMap.values()).slice(0, 10).map((analysis) => ({
     id: analysis.document_id,
     original_filename: `Document ${analysis.id}`,
-    status: analysis.status as any,
+    status: analysis.status as unknown,
     created_at: analysis.created_at,
     updated_at: analysis.updated_at,
-    file_extension: 'pdf' as any,
+    file_extension: 'pdf' as unknown,
     file_size_bytes: 0,
     mime_type: 'application/pdf',
-    document_type: 'unknown' as any,
+    document_type: 'unknown' as unknown,
     description: null,
   }));
 }
@@ -200,13 +200,13 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   return Array.from(documentMap.values()).map((analysis) => ({
     id: analysis.document_id,
     original_filename: `Document ${analysis.id}`,
-    status: analysis.status as any,
+    status: analysis.status as unknown,
     created_at: analysis.created_at,
     updated_at: analysis.updated_at,
-    file_extension: 'pdf' as any,
+    file_extension: 'pdf' as unknown,
     file_size_bytes: 0,
     mime_type: 'application/pdf',
-    document_type: 'unknown' as any,
+    document_type: 'unknown' as unknown,
     description: null,
   }));
 }
@@ -235,7 +235,7 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
     throw new Error('Failed to trigger legal analysis');
   }
 
-  const result = response.data as any;
+  const result = response.data as unknown;
   return {
     analysis_id: result.analysis_id,
   };
