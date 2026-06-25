@@ -9,23 +9,21 @@ import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentAp
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
 
-interface Analysis extends DashboardAnalysis {}
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useMe();
 
   const userName = user?.full_name?.trim() || user?.email || '';
 
-  const { data: allAnalysesRaw, isLoading: isRedactionsLoading } = useQuery<Analysis[]>({
+  const { data: allAnalysesRaw, isLoading: isRedactionsLoading } = useQuery<DashboardAnalysis[]>({
     queryKey: ['dashboard-analyses'],
-    queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS) as Promise<Analysis[]>,
+    queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS) as Promise<DashboardAnalysis[]>,
     staleTime: 60_000,
   });
 
-  const allAnalyses: Analysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
+  const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
 
-  const analyses: Analysis[] = allAnalyses.slice(0, MAX_ANALYSES_IN_LIST);
+  const analyses: DashboardAnalysis[] = allAnalyses.slice(0, MAX_ANALYSES_IN_LIST);
 
   const analysesWithLabels = allAnalyses.map((analysis) => {
     const cfg = getStatusConfig(analysis.status);
