@@ -169,63 +169,6 @@ export default function OcrResultsDetailed() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6">
-          {/* Pages > Lines > Words Structure - Primary View */}
-          {Array.isArray(ocrResult?.pages) && ocrResult.pages.length > 0 && (
-            <Card className="border border-gray-200 bg-white shadow-none mb-6">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Document Structure</h2>
-                <div className="space-y-6">
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {ocrResult.pages.map((page: any, pageIdx: number) => {
-                    const hasLines = Array.isArray(page.lines) && page.lines.length > 0;
-
-                    if (!hasLines) return null;
-
-                    return (
-                      <div key={pageIdx} className="mb-8">
-                        <h3 className="text-lg font-semibold mb-4 text-gray-900">Page {pageIdx + 1}</h3>
-                        <div className="space-y-4">
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          {page.lines.map((line: any, lineIdx: number) => (
-                            <div key={lineIdx} className="bg-gray-50 p-4 rounded border border-gray-200">
-                              <div className="mb-2">
-                                <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                  Line {lineIdx + 1}
-                                </span>
-                              </div>
-                              <p className="text-gray-900 font-medium">{line.text}</p>
-                              {Array.isArray(line.words) && line.words.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-gray-300">
-                                  <div className="text-xs font-semibold text-gray-600 mb-2">Word-by-word:</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    {line.words.map((word: any, wordIdx: number) => (
-                                      <span
-                                        key={wordIdx}
-                                        className="bg-white border border-gray-300 px-2 py-1 rounded text-xs text-gray-700"
-                                      >
-                                        {word.text}
-                                        {word.confidence !== undefined && (
-                                          <span className="text-gray-500 ml-1">
-                                            ({Math.round(word.confidence * 100)}%)
-                                          </span>
-                                        )}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Full Text Card */}
           <Card className="border border-gray-200 bg-white shadow-none mb-6">
             <CardContent className="p-6">
@@ -251,56 +194,6 @@ export default function OcrResultsDetailed() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Detailed Breakdown */}
-          {ocrResult && (
-            <Card className="border border-gray-200 bg-white shadow-none">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                  {Array.isArray(ocrResult.pages) ? 'Page Breakdown' : 'Content Breakdown'}
-                </h2>
-                <div className="space-y-6">
-                  {/* Azure Document Intelligence v4 - paragraphs based, grouped by page */}
-                  {Array.isArray(ocrResult.paragraphs) && !Array.isArray(ocrResult.analyzeResult?.readResults) && (
-                    <>
-                      {Array.from({ length: getPageCount() }, (_, pageIdx) => {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const pageParagraphs = ocrResult.paragraphs.filter((para: any) =>
-                          para.boundingRegions?.[0]?.pageNumber === pageIdx + 1
-                        );
-
-                        if (pageParagraphs.length === 0) return null;
-
-                        return (
-                          <div key={pageIdx} className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-4">
-                              <h3 className="font-semibold text-gray-900">Page {pageIdx + 1}</h3>
-                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                {pageParagraphs.length} paragraphs
-                              </span>
-                            </div>
-
-                            <div className="space-y-3">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {pageParagraphs.map((para: any, paraIdx: number) => (
-                                <div
-                                  key={paraIdx}
-                                  className="bg-gray-50 p-3 rounded border-l-4 border-blue-300"
-                                >
-                                  <p className="text-gray-900 text-sm leading-relaxed">{para.content}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </>
-                  )}
-
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
