@@ -9,17 +9,21 @@ import type { DocumentAnalysisResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 import 'tiff.js';
 
-const severityConfig = {
+const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   critical: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
-  high: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
-  medium: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
+  error:    { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
+  high:     { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
+  warning:  { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
+  medium:   { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
+  info:     { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' },
+  low:      { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' },
 };
 
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [filterSeverity, setFilterSeverity] = useState<'all' | 'critical' | 'high' | 'medium'>('all');
+  const [filterSeverity, setFilterSeverity] = useState<'all' | 'error' | 'warning' | 'info'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
   const [hoveredErrorIndex, setHoveredErrorIndex] = useState<number | null>(null);
@@ -37,6 +41,9 @@ export default function AnalysisDetails() {
     {
       query: {
         enabled: !!analysisId,
+      },
+      fetch: {
+        credentials: 'include',
       },
     }
   );
@@ -390,7 +397,7 @@ export default function AnalysisDetails() {
 
               {/* Filter Tabs */}
               <div className="flex gap-2 mb-6">
-                {(['all', 'critical', 'high', 'medium'] as const).map((severity) => (
+                {(['all', 'error', 'warning', 'info'] as const).map((severity) => (
                   <button
                     key={severity}
                     onClick={() => setFilterSeverity(severity)}
@@ -409,7 +416,7 @@ export default function AnalysisDetails() {
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {filteredErrors.map((error: any, filteredIdx) => {
                   const originalIdx = enrichedErrors.indexOf(error);
-                  const config = severityConfig[error.severity as keyof typeof severityConfig];
+                  const config = severityConfig[error.severity] ?? severityConfig['low'];
                   const isHovered = hoveredErrorIndex === originalIdx;
                   const isSelected = selectedErrorIndex === originalIdx;
                   return (
