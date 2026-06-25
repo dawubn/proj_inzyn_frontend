@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLogin } from '@/hooks/auth/useLogin';
+import { useAuthContext } from '@/context/auth-context';
+import { logoutApiV1AuthLogoutPost } from '@/api/generated/auth/auth';
 
 export default function Home() {
   const [email, setEmail] = useState('');
@@ -15,12 +17,46 @@ export default function Home() {
 
   const loginMutation = useLogin();
   const navigate = useNavigate();
+  const authContext = useAuthContext();
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (authContext?.isAuthenticated === true) {
+        const logout = async () => {
+          try {
+            await logoutApiV1AuthLogoutPost({ credentials: 'include' });
+          } catch (err) {
+            console.error('Logout error:', err);
+          } finally {
+            authContext?.setIsAuthenticated(false);
+          }
+        };
+        logout();
+      }
+    }
+  }, [authContext]);
+
+  if (authContext?.isAuthenticated === null) {
+    return null;
+  }
+
+  if (authContext?.isAuthenticated === true) {
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     try {
-      await loginMutation.mutateAsync({ email, password });
-      navigate('/dashboard');
+      const response = await loginMutation.mutateAsync({ data: { email, password } });
+      if (response.status === 204) {
+        authContext?.setIsAuthenticated(true);
+        navigate('/dashboard');
+      } else {
+        setError('Login failed');
+      }
     } catch {
       setError('Invalid email or password');
     }

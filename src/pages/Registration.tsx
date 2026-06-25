@@ -39,11 +39,11 @@ export default function Register() {
       await registerMutation.mutateAsync({
         email,
         password,
-        fullname: fullName.trim(),
-        role: 'businessuser',
+        full_name: fullName.trim(),
+        role: 'business_user',
       });
 
-      await loginMutation.mutateAsync({ email, password });
+      await loginMutation.mutateAsync({ data: { email, password } });
       navigate('/dashboard');
     } catch {
       setError('Registration failed');

@@ -1,10 +1,23 @@
-import { useQuery } from '@tanstack/react-query';
-import type { MeResponse } from '@/api/auth/auth.types';
-import { getMe } from '@/api/auth/auth';
+import { useGetMeApiV1UsersMeGet } from '@/api/generated/users/users';
+import type { UserResponse } from '@/api/generated/model';
+import { useMemo } from 'react';
 
 export function useMe() {
-  return useQuery<MeResponse, Error>({
-    queryKey: ['me'],
-    queryFn: () => getMe(),
+  const response = useGetMeApiV1UsersMeGet({
+    query: {
+      retry: false,
+    },
+    fetch: {
+      credentials: 'include',
+    },
   });
+
+  const data = useMemo(() => {
+    if (response.data?.status === 200) {
+      return response.data.data as UserResponse;
+    }
+    return undefined;
+  }, [response.data]);
+
+  return { data, isLoading: response.isLoading };
 }

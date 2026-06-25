@@ -1,14 +1,34 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import Home from './pages/Home';
 import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
-import AnalysisResult from './pages/AnalysisResults';
+import AnalysisDetails from './pages/AnalysisDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
+import { useAuthContext } from '@/context/auth-context';
 
 function App() {
+  const authContext = useAuthContext();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/users/me`, {
+          credentials: 'include',
+        });
+        authContext?.setIsAuthenticated(response.ok);
+      } catch {
+        authContext?.setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -37,12 +57,7 @@ function App() {
 
           <Route path="/account-details" element={<div>Account details</div>} />
 
-          <Route
-            path="/history/analysis-details"
-            element={<div>Analysis Details - temporary for breadcrumbs testing</div>}
-          />
-
-          <Route path="/analysis-result" element={<AnalysisResult />} />
+          <Route path="/analysis/:analysisId" element={<AnalysisDetails />} />
         </Route>
       </Routes>
     </BrowserRouter>

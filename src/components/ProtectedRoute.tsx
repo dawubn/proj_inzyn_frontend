@@ -1,5 +1,3 @@
-// src/components/ProtectedRoute.tsx
-
 import { Navigate } from 'react-router-dom';
 import { useMe } from '@/hooks/auth/useMe';
 

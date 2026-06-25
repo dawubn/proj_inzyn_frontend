@@ -1,14 +1,16 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { RegisterPayload, RegisterResponse } from '@/api/auth/auth.types';
-import { registerUser } from '@/api/auth/auth';
+import { useRegister as useRegisterBase } from '@/api/auth-wrapper';
+import type { UserCreate } from '@/api/generated/model';
 
 export function useRegister() {
-  const queryClient = useQueryClient();
+  const result = useRegisterBase();
 
-  return useMutation<RegisterResponse, Error, RegisterPayload>({
-    mutationFn: (payload) => registerUser(payload),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['me'] });
+  return {
+    ...result,
+    mutate: (payload: UserCreate) => {
+      result.mutate({ data: payload });
     },
-  });
+    mutateAsync: (payload: UserCreate) => {
+      return result.mutateAsync({ data: payload });
+    },
+  };
 }

@@ -1,7 +1,7 @@
 // src/hooks/documents/useUploadDocument.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { UploadedDocumentResponse } from '@/api/documentApi/documentApi.types';
-import { uploadDocument } from '@/api/documentApi/documentApi';
+import type { UploadedDocumentResponse } from '@/api/documents-wrapper';
+import { uploadDocument } from '@/api/documents-wrapper';
 
 export function useUploadDocument() {
   const queryClient = useQueryClient();
