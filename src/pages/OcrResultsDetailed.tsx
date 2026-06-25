@@ -128,7 +128,7 @@ export default function OcrResultsDetailed() {
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col overflow-hidden">
+    <div className="h-full bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
