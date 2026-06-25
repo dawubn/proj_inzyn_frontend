@@ -169,6 +169,63 @@ export default function OcrResultsDetailed() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6">
+          {/* Pages > Lines > Words Structure - Primary View */}
+          {Array.isArray(ocrResult?.pages) && ocrResult.pages.length > 0 && (
+            <Card className="border border-gray-200 bg-white shadow-none mb-6">
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Document Structure</h2>
+                <div className="space-y-6">
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {ocrResult.pages.map((page: any, pageIdx: number) => {
+                    const hasLines = Array.isArray(page.lines) && page.lines.length > 0;
+
+                    if (!hasLines) return null;
+
+                    return (
+                      <div key={pageIdx} className="mb-8">
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900">Page {pageIdx + 1}</h3>
+                        <div className="space-y-4">
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          {page.lines.map((line: any, lineIdx: number) => (
+                            <div key={lineIdx} className="bg-gray-50 p-4 rounded border border-gray-200">
+                              <div className="mb-2">
+                                <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                                  Line {lineIdx + 1}
+                                </span>
+                              </div>
+                              <p className="text-gray-900 font-medium">{line.text}</p>
+                              {Array.isArray(line.words) && line.words.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-300">
+                                  <div className="text-xs font-semibold text-gray-600 mb-2">Word-by-word:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                    {line.words.map((word: any, wordIdx: number) => (
+                                      <span
+                                        key={wordIdx}
+                                        className="bg-white border border-gray-300 px-2 py-1 rounded text-xs text-gray-700"
+                                      >
+                                        {word.text}
+                                        {word.confidence !== undefined && (
+                                          <span className="text-gray-500 ml-1">
+                                            ({Math.round(word.confidence * 100)}%)
+                                          </span>
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Full Text Card */}
           <Card className="border border-gray-200 bg-white shadow-none mb-6">
             <CardContent className="p-6">
@@ -240,57 +297,6 @@ export default function OcrResultsDetailed() {
                     </>
                   )}
 
-                  {/* Azure Document Intelligence v4 & Form Recognizer v3 - pretty pages structure */}
-                  {Array.isArray(ocrResult.pages) && ocrResult.pages.length > 0 && (
-                    <div>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      {ocrResult.pages.map((page: any, pageIdx: number) => {
-                        const hasLines = Array.isArray(page.lines) && page.lines.length > 0;
-
-                        if (!hasLines) return null;
-
-                        return (
-                          <div key={pageIdx} className="mb-8">
-                            <h3 className="text-lg font-semibold mb-4 text-gray-900">Page {pageIdx + 1}</h3>
-                            <div className="space-y-4">
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              {page.lines.map((line: any, lineIdx: number) => (
-                                <div key={lineIdx} className="bg-gray-50 p-4 rounded border border-gray-200">
-                                  <div className="mb-2">
-                                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                      Line {lineIdx + 1}
-                                    </span>
-                                  </div>
-                                  <p className="text-gray-900 font-medium">{line.text}</p>
-                                  {Array.isArray(line.words) && line.words.length > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-gray-300">
-                                      <div className="text-xs font-semibold text-gray-600 mb-2">Word-by-word:</div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        {line.words.map((word: any, wordIdx: number) => (
-                                          <span
-                                            key={wordIdx}
-                                            className="bg-white border border-gray-300 px-2 py-1 rounded text-xs text-gray-700"
-                                          >
-                                            {word.text}
-                                            {word.confidence !== undefined && (
-                                              <span className="text-gray-500 ml-1">
-                                                ({Math.round(word.confidence * 100)}%)
-                                              </span>
-                                            )}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
