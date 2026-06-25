@@ -50,6 +50,7 @@ export default function AnalysisDetails() {
   const findBboxForError = (error: any): { x: number; y: number; width: number; height: number } | null => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const words = (analysis?.tesseract_words as any[]) || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const textRef = (error as any).text_reference.toLowerCase().trim();
     const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
 
@@ -98,7 +99,7 @@ export default function AnalysisDetails() {
       ...error,
       bbox: findBboxForError(error)
     }));
-  }, [errors, analysis?.tesseract_words, findBboxForError]);
+  }, [errors, findBboxForError]);
 
   const filteredErrors = enrichedErrors.filter((error) => {
     const matchesSeverity = filterSeverity === 'all' || error.severity === filterSeverity;
@@ -440,7 +441,9 @@ export default function AnalysisDetails() {
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 <h3 className="font-semibold text-gray-900 mb-4">Applicable Laws</h3>
                 <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                  {((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map((law: any, idx: number) => (
+                  {((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map(
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (law: any, idx: number) => (
                     <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
                       <p className="font-medium text-sm text-gray-900">{law.law}</p>
                       <p className="text-xs text-gray-600 mt-1">{law.reference}</p>

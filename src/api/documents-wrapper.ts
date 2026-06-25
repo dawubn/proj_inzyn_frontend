@@ -165,12 +165,15 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
   return Array.from(documentMap.values()).slice(0, 10).map((analysis) => ({
     id: analysis.document_id,
     original_filename: `Document ${analysis.id}`,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     status: analysis.status as any,
     created_at: analysis.created_at,
     updated_at: analysis.updated_at,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     file_extension: 'pdf' as any,
     file_size_bytes: 0,
     mime_type: 'application/pdf',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     document_type: 'unknown' as any,
     description: null,
   }));
