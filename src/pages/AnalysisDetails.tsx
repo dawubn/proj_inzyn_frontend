@@ -178,7 +178,8 @@ export default function AnalysisDetails() {
     if (!tiffRef.current || !canvasRef.current || totalPages === 0) return;
 
     try {
-      const tiff = tiffRef.current;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tiff = tiffRef.current as any;
       tiff.setDirectory(currentPage);
       const canvas = tiff.toCanvas();
 
