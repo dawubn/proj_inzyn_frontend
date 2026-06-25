@@ -194,6 +194,55 @@ export default function OcrResultsDetailed() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Detailed Breakdown - Page Breakdown */}
+          {ocrResult && (
+            <Card className="border border-gray-200 bg-white shadow-none">
+              <CardContent className="p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                  {Array.isArray(ocrResult.pages) ? 'Page Breakdown' : 'Content Breakdown'}
+                </h2>
+                <div className="space-y-6">
+                  {/* Azure Document Intelligence v4 - paragraphs based, grouped by page */}
+                  {Array.isArray(ocrResult.paragraphs) && !Array.isArray(ocrResult.analyzeResult?.readResults) && (
+                    <>
+                      {Array.from({ length: getPageCount() }, (_, pageIdx) => {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const pageParagraphs = ocrResult.paragraphs.filter((para: any) =>
+                          para.boundingRegions?.[0]?.pageNumber === pageIdx + 1
+                        );
+
+                        if (pageParagraphs.length === 0) return null;
+
+                        return (
+                          <div key={pageIdx} className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <h3 className="font-semibold text-gray-900">Page {pageIdx + 1}</h3>
+                              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                                {pageParagraphs.length} paragraphs
+                              </span>
+                            </div>
+
+                            <div className="space-y-3">
+                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                              {pageParagraphs.map((para: any, paraIdx: number) => (
+                                <div
+                                  key={paraIdx}
+                                  className="bg-gray-50 p-3 rounded border-l-4 border-blue-300"
+                                >
+                                  <p className="text-gray-900 text-sm leading-relaxed">{para.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
