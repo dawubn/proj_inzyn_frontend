@@ -447,14 +447,16 @@ export default function AnalysisDetails() {
                   {(
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     ((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map(
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (law: any, idx: number) => (
-                    <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
-                      <p className="font-medium text-sm text-gray-900">{law.law}</p>
-                      <p className="text-xs text-gray-600 mt-1">{law.reference}</p>
-                      <p className="text-sm text-gray-700 mt-2">{law.description}</p>
-                    </div>
-                  ))}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (law: any, idx: number) => (
+                        <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
+                          <p className="font-medium text-sm text-gray-900">{law.law}</p>
+                          <p className="text-xs text-gray-600 mt-1">{law.reference}</p>
+                          <p className="text-sm text-gray-700 mt-2">{law.description}</p>
+                        </div>
+                      )
+                    )
+                  )}
                 </div>
               </CardContent>
             </Card>
