@@ -9,7 +9,6 @@ import AnalysisDetails from './pages/AnalysisDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
-import AnalysisHistory from '@/pages/AnalysisHistory';
 
 function App() {
   const authContext = useAuthContext();
@@ -27,6 +26,7 @@ function App() {
     };
 
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
