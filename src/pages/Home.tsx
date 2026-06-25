@@ -52,7 +52,7 @@ export default function Home() {
     setError('');
     try {
       const response = await loginMutation.mutateAsync({ data: { email, password } });
-      if (response.status === 204) {
+      if (response.status === 200 || response.status === 204) {
         authContext?.setIsAuthenticated(true);
         navigate('/dashboard');
       } else {
