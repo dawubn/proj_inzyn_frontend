@@ -249,8 +249,8 @@ export default function OcrResultsDetailed() {
             <Card className="border border-gray-200 bg-white shadow-none">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Raw OCR</h2>
-                <div className="bg-gray-900 p-4 rounded border border-gray-700 overflow-x-auto">
-                  <pre className="text-xs text-gray-100 font-mono whitespace-pre">
+                <div className="bg-gray-900 p-4 rounded border border-gray-700 max-h-96 overflow-auto">
+                  <pre className="text-xs text-gray-100 font-mono whitespace-pre-wrap break-words">
                     {JSON.stringify(ocrResult, null, 2)}
                   </pre>
                 </div>
