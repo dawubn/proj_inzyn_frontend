@@ -363,9 +363,14 @@ export default function AnalysisDetails() {
               <Trash2 size={16} />
               {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate(`/analysis/${analysisId}/ocr`)}
+            >
               <FileText size={16} />
-              Open analysis report
+              View OCR Results
             </Button>
             <Button
               variant="outline"
