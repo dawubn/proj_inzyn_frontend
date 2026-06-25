@@ -1,12 +1,50 @@
 // src/api/documentApi/documentApi.ts
 
 import { API_URL, authorizedFetch } from '@/api/auth/auth';
-import type {
-  UploadedDocumentResponse,
-  AnalysisResponse,
-  DocumentResponse,
-  DocumentsPage,
-} from './documentApi.types';
+
+export interface UploadedDocumentResponse {
+  id: string;
+  original_filename: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnalysisResponse {
+  id: string;
+  document_id: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DocumentResponse {
+  id: string;
+  original_filename: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentsPage {
+  items: DocumentResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface DashboardAnalysis {
+  id: string;
+  document_id: string;
+  status: string;
+  created_at: string;
+  processing_stage?: string;
+  irregularities_count?: {
+    critical?: number;
+    high?: number;
+    medium?: number;
+  };
+}
 
 export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
   const formData = new FormData();
@@ -52,17 +90,34 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   const from = new Date();
   from.setDate(now.getDate() - 7);
 
-  const dateFrom = from.toISOString().split('T')[0];
-  const dateTo = now.toISOString().split('T')[0];
-
-  const response = await authorizedFetch(
-    `${API_URL}/api/v1/documents?page=1&page_size=100&date_from=${dateFrom}&date_to=${dateTo}`,
-  );
+  const response = await authorizedFetch(`${API_URL}/api/v1/documents?page=1&page_size=100`);
 
   if (!response.ok) {
     throw new Error('Failed to fetch last 7 days documents');
   }
 
   const data = (await response.json()) as DocumentsPage;
-  return Array.isArray(data.items) ? data.items : [];
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  return items.filter((doc) => {
+    const created = new Date(doc.created_at);
+    return created >= from && created <= now;
+  });
+}
+
+export async function fetchDashboardAnalyses(limit = 50): Promise<DashboardAnalysis[]> {
+  const response = await authorizedFetch(`${API_URL}/api/v1/redactions`, {
+    method: 'GET',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch analyses');
+  }
+
+  const data = (await response.json()) as DashboardAnalysis[];
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.slice(0, limit);
 }
