@@ -168,7 +168,7 @@ export default function OcrResultsDetailed() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 pb-12">
           {/* Full Text Card */}
           <Card className="border border-gray-200 bg-white shadow-none mb-6">
             <CardContent className="p-6">
