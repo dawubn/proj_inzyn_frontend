@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Edit, Trash2, FileText, Copy } from 'lucide-react';
-import type { DocumentAnalysisResponse } from '@/api/generated/model';
+import { Edit, Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
+import type { DocumentAnalysisResponse, DocumentResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
+import { getDocumentTypeLabel, patchDocumentType, triggerLegalAnalysis } from '@/api/documents-wrapper';
 import 'tiff.js';
 
 const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -22,7 +23,9 @@ const severityConfig: Record<string, { bg: string; border: string; text: string;
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'error' | 'warning' | 'info'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
@@ -32,9 +35,15 @@ export default function AnalysisDetails() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [showRerunConfirm, setShowRerunConfirm] = useState(false);
+  const [isRerunning, setIsRerunning] = useState(false);
+  const [bubbleError, setBubbleError] = useState<string | null>(null);
+  const [documentBlobUrl, setDocumentBlobUrl] = useState<string | null>(null);
+  const [documentMimeType, setDocumentMimeType] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const tiffRef = useRef<unknown>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   const { data: analysisData, isLoading } = useGetRedactionApiV1RedactionsAnalysisIdGet(
     analysisId || '',
@@ -49,6 +58,60 @@ export default function AnalysisDetails() {
   );
 
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
+
+  const [docInfo, setDocInfo] = useState<DocumentResponse | null>(null);
+
+  useEffect(() => {
+    if (!analysis?.document_id) return;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    fetch(`${apiUrl}/api/v1/documents/${analysis.document_id}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setDocInfo(data); })
+      .catch(() => {});
+  }, [analysis?.document_id]);
+
+  const selectedDocType = searchParams.get('docType');
+  const documentType = docInfo?.document_type ?? 'unknown';
+  const suggestedType = docInfo?.suggested_document_type ?? analysis?.detected_document_type ?? null;
+  const confidence = analysis?.classification_confidence ?? null;
+
+  const isConfirmed = documentType !== 'unknown';
+  const effectiveType = isConfirmed ? documentType : (selectedDocType ?? suggestedType ?? null);
+
+  const showBubble =
+    !isConfirmed &&
+    !!selectedDocType &&
+    !!suggestedType &&
+    selectedDocType !== suggestedType &&
+    suggestedType !== 'unknown' &&
+    suggestedType !== 'other' &&
+    (confidence == null || confidence >= 0.45);
+
+  const handleRunWithDetectedType = async () => {
+    if (!analysis?.document_id || !suggestedType) return;
+    setBubbleError(null);
+    setIsRerunning(true);
+    try {
+      const updated = await patchDocumentType(analysis.document_id, suggestedType);
+      setDocInfo(updated);
+      const result = await triggerLegalAnalysis(analysis.document_id);
+      navigate(`/document-analysis?resume=${result.analysis_id}`);
+    } catch {
+      setBubbleError('Failed to start re-analysis. Please try again.');
+      setIsRerunning(false);
+    }
+  };
+
+  const handleKeepMyType = async () => {
+    if (!analysis?.document_id || !selectedDocType) return;
+    setBubbleError(null);
+    try {
+      const updated = await patchDocumentType(analysis.document_id, selectedDocType);
+      setDocInfo(updated);
+    } catch {
+      setBubbleError('Failed to save type. Please try again.');
+    }
+  };
 
   const errors = useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -68,7 +131,6 @@ export default function AnalysisDetails() {
       return null;
     }
 
-    // Find ALL words from tesseract_words that match any of the refWords
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const matchedWords: any[] = [];
     const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
@@ -89,19 +151,13 @@ export default function AnalysisDetails() {
       return null;
     }
 
-    // Calculate bounding box for ALL matched words
     const bboxes = matchedWords.map(w => w.bbox);
     const minX = Math.min(...bboxes.map(b => b.x));
     const minY = Math.min(...bboxes.map(b => b.y));
     const maxX = Math.max(...bboxes.map(b => b.x + b.width));
     const maxY = Math.max(...bboxes.map(b => b.y + b.height));
 
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }, [analysis?.tesseract_words]);
 
   const enrichedErrors = useMemo(() => {
@@ -117,16 +173,20 @@ export default function AnalysisDetails() {
     return matchesSeverity && matchesSearch;
   });
 
-  // Load TIFF document
   useEffect(() => {
-    if (!analysis?.document_id || !canvasRef.current) return;
+    if (!analysis?.document_id) return;
 
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-    const loadTiff = async () => {
+    const loadDocument = async () => {
       try {
         setIsLoadingImage(true);
         setImageError(null);
+
+        if (blobUrlRef.current) {
+          URL.revokeObjectURL(blobUrlRef.current);
+          blobUrlRef.current = null;
+        }
 
         const response = await fetch(
           `${apiUrl}/api/v1/documents/${analysis.document_id}/download`,
@@ -137,54 +197,65 @@ export default function AnalysisDetails() {
           throw new Error(`Server error: ${response.status}`);
         }
 
-        const arrayBuffer = await response.arrayBuffer();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Tiff = (window as any).Tiff;
-        if (!Tiff) {
-          throw new Error('Tiff library not loaded');
+        const contentType = response.headers.get('content-type') || '';
+
+        if (contentType.includes('image/tiff') || contentType.includes('application/octet-stream')) {
+          const arrayBuffer = await response.arrayBuffer();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const Tiff = (window as any).Tiff;
+          if (!Tiff) throw new Error('Tiff library not loaded');
+
+          const tiff = new Tiff({ buffer: arrayBuffer });
+          const pages = tiff.countDirectory();
+          setTotalPages(pages);
+          setCurrentPage(0);
+          tiffRef.current = tiff;
+
+          const canvas = tiff.toCanvas();
+          if (!canvas) throw new Error('Failed to render TIFF');
+
+          const canvasElement = canvasRef.current;
+          if (!canvasElement) return;
+
+          canvasElement.width = canvas.width;
+          canvasElement.height = canvas.height;
+          const ctx = canvasElement.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(canvas, 0, 0);
+          imageRef.current = canvas;
+          setDocumentMimeType('image/tiff');
+        } else {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          blobUrlRef.current = url;
+          setDocumentBlobUrl(url);
+          setDocumentMimeType(contentType.split(';')[0].trim());
+          setTotalPages(0);
         }
-        const tiff = new Tiff({ buffer: arrayBuffer });
 
-        // Get total pages
-        const pages = tiff.countDirectory();
-        setTotalPages(pages);
-        setCurrentPage(0);
-
-        // Store TIFF for page changes
-        tiffRef.current = tiff;
-
-        // Render first page
-        const canvas = tiff.toCanvas();
-
-        if (!canvas) {
-          throw new Error('Failed to render TIFF');
-        }
-
-        const canvasElement = canvasRef.current;
-        if (!canvasElement) return;
-
-        // Copy TIFF canvas to our canvas
-        canvasElement.width = canvas.width;
-        canvasElement.height = canvas.height;
-
-        const ctx = canvasElement.getContext('2d');
-        if (!ctx) return;
-
-        ctx.drawImage(canvas, 0, 0);
-        imageRef.current = canvas;
         setIsLoadingImage(false);
       } catch (error) {
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.error('Error loading TIFF:', errMsg);
+        console.error('Error loading document:', error);
+        const errMsg = error instanceof Error
+          ? error.message
+          : (typeof error === 'object' && error !== null && 'message' in error)
+            ? String((error as Record<string, unknown>).message)
+            : String(error);
         setImageError(`Error: ${errMsg}`);
         setIsLoadingImage(false);
       }
     };
 
-    loadTiff();
+    loadDocument();
+
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
   }, [analysis?.document_id, errors]);
 
-  // Handle page changes
   useEffect(() => {
     if (!tiffRef.current || !canvasRef.current || totalPages === 0) return;
 
@@ -210,7 +281,6 @@ export default function AnalysisDetails() {
     }
   }, [currentPage, totalPages]);
 
-  // Redraw highlights
   useEffect(() => {
     if (!canvasRef.current || !imageRef.current) return;
 
@@ -218,7 +288,6 @@ export default function AnalysisDetails() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Redraw TIFF image
     if (imageRef.current instanceof HTMLCanvasElement) {
       ctx.drawImage(imageRef.current, 0, 0);
     }
@@ -226,49 +295,7 @@ export default function AnalysisDetails() {
     // TODO: Fix highlight positioning - temporarily disabled
     /*
     enrichedErrors.forEach((error: any, idx: number) => {
-      const isHovered = hoveredErrorIndex === idx;
-      const isSelected = selectedErrorIndex === idx;
-
-      if (!error.bbox) {
-        console.log(`Error ${idx} (${error.issue.substring(0, 40)}) has no bbox`);
-        return;
-      }
-
-      if (idx === 0) {
-        console.log('Drawing highlights. Canvas:', { width: canvas.width, height: canvas.height });
-        console.log('First error bbox:', error.bbox);
-      }
-
-      const severity = error.severity as keyof typeof severityConfig;
-      const baseOpacity = isHovered || isSelected ? 0.4 : 0.15;
-      const strokeWidth = isHovered || isSelected ? 3 : 2;
-
-      const colors = {
-        critical: {
-          fill: `rgba(239, 68, 68, ${baseOpacity})`,
-          stroke: isHovered || isSelected ? '#991b1b' : '#dc2626'
-        },
-        high: {
-          fill: `rgba(249, 115, 22, ${baseOpacity})`,
-          stroke: isHovered || isSelected ? '#92400e' : '#ea580c'
-        },
-        medium: {
-          fill: `rgba(234, 179, 8, ${baseOpacity})`,
-          stroke: isHovered || isSelected ? '#854d0e' : '#ca8a04'
-        },
-      };
-
-      const color = colors[severity];
-      const { x, y, width, height } = error.bbox;
-
-      if (ctx) {
-        ctx.fillStyle = color.fill;
-        ctx.fillRect(x, y, width, height);
-
-        ctx.strokeStyle = color.stroke;
-        ctx.lineWidth = strokeWidth;
-        ctx.strokeRect(x, y, width, height);
-      }
+      ...
     });
     */
   }, [hoveredErrorIndex, selectedErrorIndex, enrichedErrors]);
@@ -289,11 +316,64 @@ export default function AnalysisDetails() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0">
-
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900">Document Analysis</h1>
-            <p className="text-sm text-gray-600 mt-1">Legal Analysis Report</p>
+            <p className="text-sm text-gray-600 mt-1">{getDocumentTypeLabel(effectiveType)}</p>
+
+            {showBubble && !showRerunConfirm && (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
+                <CloudAlert size={15} className="text-blue-500 flex-shrink-0" />
+                <span className="text-blue-700">
+                  Suggested type: <strong>{getDocumentTypeLabel(suggestedType)}</strong>
+                  {confidence != null && <span className="text-blue-500 ml-1">({Math.round(confidence * 100)}%)</span>}
+                </span>
+                <button
+                  onClick={() => setShowRerunConfirm(true)}
+                  className="ml-1 rounded px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                >
+                  Use detected
+                </button>
+                {selectedDocType && (
+                  <button
+                    onClick={handleKeepMyType}
+                    disabled={isRerunning}
+                    className="rounded px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                  >
+                    Keep my type
+                  </button>
+                )}
+              </div>
+            )}
+
+            {showBubble && showRerunConfirm && (
+              <div className="mt-2 inline-flex flex-col gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <CloudAlert size={15} className="text-blue-500 flex-shrink-0" />
+                  <span className="text-blue-700">
+                    Re-run analysis as <strong>{getDocumentTypeLabel(suggestedType)}</strong>?
+                  </span>
+                  <button
+                    onClick={handleRunWithDetectedType}
+                    disabled={isRerunning}
+                    className="ml-1 rounded px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isRerunning ? 'Starting...' : 'Run analysis'}
+                  </button>
+                  <button
+                    onClick={() => { setShowRerunConfirm(false); setBubbleError(null); }}
+                    disabled={isRerunning}
+                    className="rounded px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {bubbleError && (
+                  <p className="text-xs text-red-600 pl-5">{bubbleError}</p>
+                )}
+              </div>
+            )}
+
             {analysis && (
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
                 <div className="text-gray-600">
@@ -387,7 +467,6 @@ export default function AnalysisDetails() {
             <CardContent className="p-6 flex-1 flex flex-col min-h-0">
               <h2 className="font-semibold text-gray-900 mb-4">Issues Found</h2>
 
-              {/* Search */}
               <Input
                 placeholder="Search alert"
                 value={searchTerm}
@@ -395,7 +474,6 @@ export default function AnalysisDetails() {
                 className="mb-4 border-gray-300"
               />
 
-              {/* Filter Tabs */}
               <div className="flex gap-2 mb-6">
                 {(['all', 'error', 'warning', 'info'] as const).map((severity) => (
                   <button
@@ -411,7 +489,6 @@ export default function AnalysisDetails() {
                 ))}
               </div>
 
-              {/* Issues List */}
               <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {filteredErrors.map((error: any, filteredIdx) => {
@@ -497,7 +574,6 @@ export default function AnalysisDetails() {
                   </div>
                 )}
 
-                {/* Page Navigation */}
                 {totalPages > 1 && (
                   <div className="mb-4 flex items-center gap-3">
                     <button
@@ -531,11 +607,28 @@ export default function AnalysisDetails() {
                       </div>
                     </div>
                   )}
-                  <canvas
-                    ref={canvasRef}
-                    className="mx-auto border border-gray-300 rounded"
-                    style={{ maxWidth: '100%', height: 'auto' }}
-                  />
+                  {documentMimeType === 'application/pdf' && documentBlobUrl ? (
+                    <iframe
+                      src={documentBlobUrl}
+                      className="w-full h-full border border-gray-300 rounded"
+                      title="Document Preview"
+                    />
+                  ) : documentMimeType === 'image/jpeg' || documentMimeType === 'image/png' ? (
+                    documentBlobUrl && (
+                      <img
+                        src={documentBlobUrl}
+                        alt="Document"
+                        className="mx-auto border border-gray-300 rounded"
+                        style={{ maxWidth: '100%', height: 'auto' }}
+                      />
+                    )
+                  ) : (
+                    <canvas
+                      ref={canvasRef}
+                      className="mx-auto border border-gray-300 rounded"
+                      style={{ maxWidth: '100%', height: 'auto' }}
+                    />
+                  )}
                 </div>
                 <div className="mt-3 flex gap-2">
                   <div className="flex items-center gap-2">

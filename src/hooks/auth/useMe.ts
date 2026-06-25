@@ -19,5 +19,5 @@ export function useMe() {
     return undefined;
   }, [response.data]);
 
-  return { data, isLoading: response.isLoading };
+  return { data, isLoading: response.isLoading, isFetching: response.isFetching };
 }

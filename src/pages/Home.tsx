@@ -56,7 +56,7 @@ export default function Home() {
         authContext?.setIsAuthenticated(true);
         navigate('/dashboard');
       } else {
-        setError('Login failed');
+        setError('Invalid email or password');
       }
     } catch {
       setError('Invalid email or password');

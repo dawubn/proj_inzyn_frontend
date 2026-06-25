@@ -25,6 +25,32 @@ export interface DocumentsPage {
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 export const MAX_FILES_COUNT = 5;
 
+export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  auto: 'Auto-detect',
+  invoice: 'Invoice',
+  contract: 'Contract',
+  id_card: 'ID Card',
+  passport: 'Passport',
+  bank_statement: 'Bank Statement',
+  tax_form: 'Tax Form',
+  financial_report: 'Financial Report',
+  government_tender: 'Government Tender',
+  law_and_regulation: 'Law & Regulation',
+  manual: 'Manual',
+  patent: 'Patent',
+  scientific_article: 'Scientific Article',
+  lawsuit: 'Lawsuit',
+  power_of_attorney: 'Power of Attorney',
+  application: 'Application',
+  unknown: 'Unknown',
+  other: 'Other',
+};
+
+export function getDocumentTypeLabel(type: string | null | undefined): string {
+  if (!type) return 'Legal Analysis Report';
+  return DOCUMENT_TYPE_LABELS[type] ?? type;
+}
+
 export type AllowedDocumentMimeType = 'application/pdf' | 'image/jpeg' | 'image/png';
 
 export const ALLOWED_DOCUMENT_MIME_TYPES: AllowedDocumentMimeType[] = [
@@ -175,6 +201,7 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
     mime_type: 'application/pdf',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     document_type: 'unknown' as any,
+    suggested_document_type: null,
     description: null,
   }));
 }
@@ -214,6 +241,7 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
     mime_type: 'application/pdf',
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     document_type: 'unknown' as any,
+    suggested_document_type: null,
     description: null,
   }));
 }
@@ -247,6 +275,22 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   return {
     analysis_id: result.analysis_id,
   };
+}
+
+export async function patchDocumentType(documentId: string, documentType: string): Promise<DocumentResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ document_type: documentType }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update document type');
+  }
+
+  return response.json() as Promise<DocumentResponse>;
 }
 
 export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
