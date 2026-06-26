@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { getStatusConfig, getDocumentTypeLabel } from '@/api/documents-wrapper';
+import { getStatusConfig, getDocumentTypeLabel, fetchDocuments } from '@/api/documents-wrapper';
 import { formatDate } from '@/lib/formatters';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
+import type { DocumentResponse } from '@/api/generated/model';
 
 export default function AnalysisHistory() {
   const navigate = useNavigate();
@@ -19,6 +20,28 @@ export default function AnalysisHistory() {
     queryFn: () => fetchDashboardAnalyses(1000) as Promise<DashboardAnalysis[]>,
     staleTime: 60_000,
   });
+
+  const { data: allDocuments } = useQuery({
+    queryKey: ['user-documents-all'],
+    queryFn: async () => {
+      let page = 1;
+      const items: DocumentResponse[] = [];
+      while (true) {
+        const resp = await fetchDocuments(page, 100);
+        items.push(...resp.items);
+        if (page >= resp.pages) break;
+        page++;
+      }
+      return items;
+    },
+    staleTime: 30_000,
+  });
+
+  const documentMap = useMemo(() => {
+    const map = new Map<string, DocumentResponse>();
+    allDocuments?.forEach(doc => map.set(doc.id, doc));
+    return map;
+  }, [allDocuments]);
 
   const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
 
@@ -137,7 +160,12 @@ export default function AnalysisHistory() {
 
                           <div className="w-40">
                             <p className="text-[11px] sm:text-xs text-[#374151]">
-                              {getDocumentTypeLabel(analysis.detected_document_type)}
+                              {(() => {
+                                const docType = documentMap.get(analysis.document_id)?.document_type;
+                                return getDocumentTypeLabel(
+                                  docType && docType !== 'unknown' ? docType : analysis.detected_document_type
+                                );
+                              })()}
                             </p>
                           </div>
 
