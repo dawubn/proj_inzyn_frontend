@@ -6,6 +6,7 @@ import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import AnalysisDetails from './pages/AnalysisDetails';
+import OcrResults from './pages/OcrResultsDetailed';
 import AnalysisHistory from '@/pages/AnalysisHistory';
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -60,6 +61,7 @@ function App() {
           <Route path="/account-details" element={<div>Account details</div>} />
 
           <Route path="/analysis/:analysisId" element={<AnalysisDetails />} />
+          <Route path="/analysis/:analysisId/ocr" element={<OcrResults />} />
         </Route>
       </Routes>
     </BrowserRouter>

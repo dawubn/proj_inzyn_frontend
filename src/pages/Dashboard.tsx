@@ -74,7 +74,7 @@ export default function Dashboard() {
               onClick={() => navigate('/document-analysis')}
               className="h-10 w-full rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A] sm:w-auto sm:min-w-[190px]"
             >
-              Add new documents
+              New Document Analysis
             </Button>
           </div>
         </div>
