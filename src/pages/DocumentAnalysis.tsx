@@ -10,6 +10,7 @@ import {
   fetchDocuments,
   triggerLegalAnalysis,
   getAnalysisStatus,
+  patchDocumentType,
   DOCUMENT_TYPE_LABELS,
   getDocumentTypeLabel,
 } from '@/api/documents-wrapper';
@@ -112,10 +113,19 @@ export default function DocumentAnalysis() {
 
   useEffect(() => {
     if (analysisStatus?.status === 'completed' && currentAnalysisId) {
-      const params = documentTypeChoice !== 'auto' ? `?docType=${documentTypeChoice}` : '';
-      navigate(`/analysis/${currentAnalysisId}${params}`);
+      const doNavigate = async () => {
+        if (documentTypeChoice !== 'auto' && analysisStatus.document_id) {
+          try {
+            await patchDocumentType(analysisStatus.document_id, documentTypeChoice);
+          } catch {
+            // best-effort
+          }
+        }
+        navigate(`/analysis/${currentAnalysisId}`);
+      };
+      doNavigate();
     }
-  }, [analysisStatus?.status, currentAnalysisId, navigate, documentTypeChoice]);
+  }, [analysisStatus?.status, currentAnalysisId, navigate, documentTypeChoice, analysisStatus?.document_id]);
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {

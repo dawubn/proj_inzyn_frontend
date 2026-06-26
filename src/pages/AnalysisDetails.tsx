@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
 import type { DocumentAnalysisResponse, DocumentResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
-import { getDocumentTypeLabel, patchDocumentType, triggerLegalAnalysis } from '@/api/documents-wrapper';
+import { getDocumentTypeLabel, patchDocumentType, confirmDocumentType, triggerLegalAnalysis } from '@/api/documents-wrapper';
 import 'tiff.js';
 
 const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
@@ -23,7 +23,6 @@ const severityConfig: Record<string, { bg: string; border: string; text: string;
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,19 +68,20 @@ export default function AnalysisDetails() {
       .catch(() => {});
   }, [analysis?.document_id]);
 
-  const selectedDocType = searchParams.get('docType');
+  const [bubbleDismissed, setBubbleDismissed] = useState(false);
+
   const documentType = docInfo?.document_type ?? 'unknown';
   const suggestedType = docInfo?.suggested_document_type ?? analysis?.detected_document_type ?? null;
   const confidence = analysis?.classification_confidence ?? null;
 
-  const isConfirmed = documentType !== 'unknown';
-  const effectiveType = isConfirmed ? documentType : (selectedDocType ?? suggestedType ?? null);
+  const userSelectedType = documentType !== 'unknown';
+  const effectiveType = userSelectedType ? documentType : (suggestedType ?? null);
 
   const showBubble =
-    !isConfirmed &&
-    !!selectedDocType &&
+    !bubbleDismissed &&
+    userSelectedType &&
     !!suggestedType &&
-    selectedDocType !== suggestedType &&
+    documentType !== suggestedType &&
     suggestedType !== 'unknown' &&
     suggestedType !== 'other' &&
     (confidence == null || confidence >= 0.45);
@@ -102,13 +102,13 @@ export default function AnalysisDetails() {
   };
 
   const handleKeepMyType = async () => {
-    if (!analysis?.document_id || !selectedDocType) return;
-    setBubbleError(null);
+    if (!analysis?.document_id || !documentType) return;
+    setBubbleDismissed(true);
     try {
-      const updated = await patchDocumentType(analysis.document_id, selectedDocType);
+      const updated = await confirmDocumentType(analysis.document_id, documentType);
       setDocInfo(updated);
     } catch {
-      setBubbleError('Failed to save type. Please try again.');
+      // dismiss locally even if backend call fails
     }
   };
 
@@ -338,15 +338,12 @@ export default function AnalysisDetails() {
                 >
                   Use detected
                 </button>
-                {selectedDocType && (
-                  <button
-                    onClick={handleKeepMyType}
-                    disabled={isRerunning}
-                    className="rounded px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
-                  >
-                    Keep my type
-                  </button>
-                )}
+                <button
+                  onClick={handleKeepMyType}
+                  className="rounded px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 transition-colors"
+                >
+                  Keep my type
+                </button>
               </div>
             )}
 

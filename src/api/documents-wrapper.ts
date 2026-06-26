@@ -293,6 +293,22 @@ export async function patchDocumentType(documentId: string, documentType: string
   return response.json() as Promise<DocumentResponse>;
 }
 
+export async function confirmDocumentType(documentId: string, confirmedType: string): Promise<DocumentResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ suggested_document_type: confirmedType }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to confirm document type');
+  }
+
+  return response.json() as Promise<DocumentResponse>;
+}
+
 export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
   const response = await getRedactionApiV1RedactionsAnalysisIdGet(
     analysisId,
