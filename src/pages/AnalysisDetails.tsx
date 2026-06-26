@@ -4,21 +4,80 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
-import type { DocumentAnalysisResponse, DocumentResponse } from '@/api/generated/model';
-import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
-import { getDocumentTypeLabel, patchDocumentType, confirmDocumentType, triggerLegalAnalysis } from '@/api/documents-wrapper';
+import { Trash2, FileText, Copy, CloudAlert, Brain } from 'lucide-react';
+import type {
+  AnalysisReportResponse,
+  DocumentAnalysisResponse,
+  DocumentResponse,
+  ValidationIssue,
+} from '@/api/generated/model';
+import { useGetReportApiV1ReportsAnalysisIdGet } from '@/api/generated/reports/reports';
+import {
+  deleteRedactionApiV1RedactionsAnalysisIdDelete,
+  useGetRedactionApiV1RedactionsAnalysisIdGet,
+} from '@/api/generated/redactions/redactions';
+import {
+  getDocumentTypeLabel,
+  patchDocumentType,
+  confirmDocumentType,
+  triggerLegalAnalysis,
+} from '@/api/documents-wrapper';
 import 'tiff.js';
 
-const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
-  critical: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
-  error: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
-  high: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
-  warning: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
-  medium: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
-  info: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' },
-  low: { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' },
-};
+const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> =
+  {
+    critical: {
+      bg: 'bg-red-50',
+      border: 'border-red-300',
+      text: 'text-red-700',
+      badge: 'bg-red-100 text-red-800',
+    },
+    error: {
+      bg: 'bg-red-50',
+      border: 'border-red-300',
+      text: 'text-red-700',
+      badge: 'bg-red-100 text-red-800',
+    },
+    high: {
+      bg: 'bg-orange-50',
+      border: 'border-orange-300',
+      text: 'text-orange-700',
+      badge: 'bg-orange-100 text-orange-800',
+    },
+    warning: {
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-300',
+      text: 'text-yellow-700',
+      badge: 'bg-yellow-100 text-yellow-800',
+    },
+    medium: {
+      bg: 'bg-yellow-50',
+      border: 'border-yellow-300',
+      text: 'text-yellow-700',
+      badge: 'bg-yellow-100 text-yellow-800',
+    },
+    info: {
+      bg: 'bg-blue-50',
+      border: 'border-blue-300',
+      text: 'text-blue-700',
+      badge: 'bg-blue-100 text-blue-800',
+    },
+    low: {
+      bg: 'bg-gray-50',
+      border: 'border-gray-300',
+      text: 'text-gray-700',
+      badge: 'bg-gray-100 text-gray-800',
+    },
+  };
+
+function AiBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+      <Brain size={13} strokeWidth={2} />
+      Artificial Intelligence
+    </span>
+  );
+}
 
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
@@ -52,10 +111,27 @@ export default function AnalysisDetails() {
       fetch: {
         credentials: 'include',
       },
-    }
+    },
+  );
+  const { data: reportData, isLoading: isReportLoading } = useGetReportApiV1ReportsAnalysisIdGet(
+    analysisId || '',
+    {
+      query: {
+        enabled: !!analysisId,
+      },
+      fetch: {
+        credentials: 'include',
+      },
+    },
   );
 
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
+  const formalReport =
+    reportData?.status === 200 ? (reportData.data as AnalysisReportResponse) : undefined;
+  const formalIssues = useMemo(
+    () => [...(formalReport?.errors || []), ...(formalReport?.warnings || [])],
+    [formalReport],
+  );
 
   const [docInfo, setDocInfo] = useState<DocumentResponse | null>(null);
 
@@ -63,15 +139,18 @@ export default function AnalysisDetails() {
     if (!analysis?.document_id) return;
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
     fetch(`${apiUrl}/api/v1/documents/${analysis.document_id}`, { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setDocInfo(data); })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setDocInfo(data);
+      })
       .catch(() => {});
   }, [analysis?.document_id]);
 
   const [bubbleDismissed, setBubbleDismissed] = useState(false);
 
   const documentType = docInfo?.document_type ?? 'unknown';
-  const suggestedType = docInfo?.suggested_document_type ?? analysis?.detected_document_type ?? null;
+  const suggestedType =
+    docInfo?.suggested_document_type ?? analysis?.detected_document_type ?? null;
   const confidence = analysis?.classification_confidence ?? null;
 
   const userSelectedType = documentType !== 'unknown';
@@ -115,59 +194,62 @@ export default function AnalysisDetails() {
   const errors = useMemo(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     () => ((analysis?.legal_analysis_result as any)?.errors as any[]) || [],
-    [analysis?.legal_analysis_result]
+    [analysis?.legal_analysis_result],
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const findBboxForError = useCallback((error: any): { x: number; y: number; width: number; height: number } | null => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const words = (analysis?.tesseract_words as any[]) || [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const textRef = (error as any).text_reference.toLowerCase().trim();
-    const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
+  const findBboxForError = useCallback(
+    (error: any): { x: number; y: number; width: number; height: number } | null => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const words = (analysis?.tesseract_words as any[]) || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const textRef = (error as any).text_reference.toLowerCase().trim();
+      const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
 
-    if (refWords.length === 0) {
-      return null;
-    }
+      if (refWords.length === 0) {
+        return null;
+      }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const matchedWords: any[] = [];
-    const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const matchedWords: any[] = [];
+      const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
 
-    for (const word of words) {
-      const wordText = word.text.toLowerCase();
-      const cleanedWord = wordText.replace(/[^\p{L}\p{N}]/gu, '');
+      for (const word of words) {
+        const wordText = word.text.toLowerCase();
+        const cleanedWord = wordText.replace(/[^\p{L}\p{N}]/gu, '');
 
-      for (const cleanedRefWord of cleanedRefWords) {
-        if (cleanedWord.includes(cleanedRefWord) || cleanedRefWord.includes(cleanedWord)) {
-          matchedWords.push(word);
-          break;
+        for (const cleanedRefWord of cleanedRefWords) {
+          if (cleanedWord.includes(cleanedRefWord) || cleanedRefWord.includes(cleanedWord)) {
+            matchedWords.push(word);
+            break;
+          }
         }
       }
-    }
 
-    if (matchedWords.length === 0) {
-      return null;
-    }
+      if (matchedWords.length === 0) {
+        return null;
+      }
 
-    const bboxes = matchedWords.map(w => w.bbox);
-    const minX = Math.min(...bboxes.map(b => b.x));
-    const minY = Math.min(...bboxes.map(b => b.y));
-    const maxX = Math.max(...bboxes.map(b => b.x + b.width));
-    const maxY = Math.max(...bboxes.map(b => b.y + b.height));
+      const bboxes = matchedWords.map((w) => w.bbox);
+      const minX = Math.min(...bboxes.map((b) => b.x));
+      const minY = Math.min(...bboxes.map((b) => b.y));
+      const maxX = Math.max(...bboxes.map((b) => b.x + b.width));
+      const maxY = Math.max(...bboxes.map((b) => b.y + b.height));
 
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-  }, [analysis?.tesseract_words]);
+      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    },
+    [analysis?.tesseract_words],
+  );
 
   const enrichedErrors = useMemo(() => {
     return errors.map((error) => ({
       ...error,
-      bbox: findBboxForError(error)
+      bbox: findBboxForError(error),
     }));
   }, [errors, findBboxForError]);
 
   const availableSeverities = useMemo(() => {
-    const severities = new Set(enrichedErrors.map(e => e.severity));
+    const severities = new Set(enrichedErrors.map((e) => e.severity));
     return ['all', ...Array.from(severities).sort()];
   }, [enrichedErrors]);
 
@@ -194,7 +276,7 @@ export default function AnalysisDetails() {
 
         const response = await fetch(
           `${apiUrl}/api/v1/documents/${analysis.document_id}/download`,
-          { credentials: 'include' }
+          { credentials: 'include' },
         );
 
         if (!response.ok) {
@@ -203,7 +285,10 @@ export default function AnalysisDetails() {
 
         const contentType = response.headers.get('content-type') || '';
 
-        if (contentType.includes('image/tiff') || contentType.includes('application/octet-stream')) {
+        if (
+          contentType.includes('image/tiff') ||
+          contentType.includes('application/octet-stream')
+        ) {
           const arrayBuffer = await response.arrayBuffer();
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const Tiff = (window as any).Tiff;
@@ -240,11 +325,12 @@ export default function AnalysisDetails() {
         setIsLoadingImage(false);
       } catch (error) {
         console.error('Error loading document:', error);
-        const errMsg = error instanceof Error
-          ? error.message
-          : (typeof error === 'object' && error !== null && 'message' in error)
-            ? String((error as Record<string, unknown>).message)
-            : String(error);
+        const errMsg =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' && error !== null && 'message' in error
+              ? String((error as Record<string, unknown>).message)
+              : String(error);
         setImageError(`Error: ${errMsg}`);
         setIsLoadingImage(false);
       }
@@ -330,7 +416,9 @@ export default function AnalysisDetails() {
                 <CloudAlert size={15} className="text-blue-500 flex-shrink-0" />
                 <span className="text-blue-700">
                   Suggested type: <strong>{getDocumentTypeLabel(suggestedType)}</strong>
-                  {confidence != null && <span className="text-blue-500 ml-1">({Math.round(confidence * 100)}%)</span>}
+                  {confidence != null && (
+                    <span className="text-blue-500 ml-1">({Math.round(confidence * 100)}%)</span>
+                  )}
                 </span>
                 <button
                   onClick={() => setShowRerunConfirm(true)}
@@ -362,23 +450,27 @@ export default function AnalysisDetails() {
                     {isRerunning ? 'Starting...' : 'Run analysis'}
                   </button>
                   <button
-                    onClick={() => { setShowRerunConfirm(false); setBubbleError(null); }}
+                    onClick={() => {
+                      setShowRerunConfirm(false);
+                      setBubbleError(null);
+                    }}
                     disabled={isRerunning}
                     className="rounded px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
-                {bubbleError && (
-                  <p className="text-xs text-red-600 pl-5">{bubbleError}</p>
-                )}
+                {bubbleError && <p className="text-xs text-red-600 pl-5">{bubbleError}</p>}
               </div>
             )}
 
             {analysis && (
               <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
                 <div className="text-gray-600">
-                  Created: <span className="font-medium text-gray-900">{new Date(analysis.created_at).toLocaleString('pl-PL')}</span>
+                  Created:{' '}
+                  <span className="font-medium text-gray-900">
+                    {new Date(analysis.created_at).toLocaleString('pl-PL')}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-gray-600">Document ID:</span>
@@ -402,12 +494,19 @@ export default function AnalysisDetails() {
                     <Copy size={14} className="flex-shrink-0" />
                   </button>
                 </div>
-                <div className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${analysis.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  analysis.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                    analysis.status === 'ocr_failed' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                  }`}>
-                  {analysis.status.charAt(0).toUpperCase() + analysis.status.slice(1).replace(/_/g, ' ')}
+                <div
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
+                    analysis.status === 'completed'
+                      ? 'bg-green-100 text-green-800'
+                      : analysis.status === 'in_progress'
+                        ? 'bg-blue-100 text-blue-800'
+                        : analysis.status === 'ocr_failed'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {analysis.status.charAt(0).toUpperCase() +
+                    analysis.status.slice(1).replace(/_/g, ' ')}
                 </div>
               </div>
             )}
@@ -448,11 +547,7 @@ export default function AnalysisDetails() {
               <FileText size={16} />
               View Extracted Text
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/document-analysis')}
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/document-analysis')}>
               Analyze Another Document
             </Button>
           </div>
@@ -463,10 +558,65 @@ export default function AnalysisDetails() {
       <div className="flex gap-6 px-6 py-3 flex-1 min-h-0 overflow-hidden">
         {/* Left Panel - Issues List & Applicable Laws */}
         <div className="w-96 flex-shrink-0 flex flex-col gap-6 min-h-0 overflow-hidden">
+          {/* Formal Issues Card */}
+          <Card className="border border-gray-200 bg-white shadow-none flex-shrink-0 max-h-80">
+            <CardContent className="p-6 flex flex-col max-h-80">
+              <h2 className="mb-4 font-semibold text-gray-900">Formal Issues</h2>
+
+              {isReportLoading && (
+                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                  Loading formal issues...
+                </div>
+              )}
+
+              {!isReportLoading && !formalReport && (
+                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                  Formal issues are not available yet.
+                </div>
+              )}
+
+              {!isReportLoading && formalReport && formalIssues.length === 0 && (
+                <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                  No formal issues detected.
+                </div>
+              )}
+
+              {formalIssues.length > 0 && (
+                <div className="space-y-3 overflow-y-auto pr-1">
+                  {formalIssues.map((issue: ValidationIssue, idx: number) => {
+                    const config = severityConfig[issue.severity] ?? severityConfig.low;
+
+                    return (
+                      <div
+                        key={`${issue.rule_name}-${idx}`}
+                        className={`border-l-4 ${config.border} ${config.bg} rounded p-3`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-sm font-medium ${config.text}`}>{issue.message}</p>
+                            <p className="mt-1 text-xs text-gray-600">{issue.rule_name}</p>
+                          </div>
+                          <span
+                            className={`${config.badge} whitespace-nowrap rounded px-2 py-1 text-xs font-medium`}
+                          >
+                            {issue.severity}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Issues Found Card */}
           <Card className="border border-gray-200 bg-white shadow-none flex-1 flex flex-col min-h-0">
             <CardContent className="p-6 flex-1 flex flex-col min-h-0">
-              <h2 className="font-semibold text-gray-900 mb-4">Issues Found</h2>
+              <div className="mb-4 flex items-center gap-3">
+                <h2 className="font-semibold text-gray-900">Issues Found</h2>
+                <AiBadge />
+              </div>
 
               <Input
                 placeholder="Search alert"
@@ -481,10 +631,11 @@ export default function AnalysisDetails() {
                   <button
                     key={severity}
                     onClick={() => setFilterSeverity(severity)}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition ${filterSeverity === severity
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition ${
+                      filterSeverity === severity
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   >
                     {severity.charAt(0).toUpperCase() + severity.slice(1)}
                   </button>
@@ -504,15 +655,24 @@ export default function AnalysisDetails() {
                       onMouseEnter={() => setHoveredErrorIndex(originalIdx)}
                       onMouseLeave={() => setHoveredErrorIndex(null)}
                       onClick={() => setSelectedErrorIndex(isSelected ? null : originalIdx)}
-                      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded transition cursor-pointer ${isSelected ? 'ring-2 ring-gray-900 bg-opacity-80' : isHovered ? 'bg-opacity-80' : ''
-                        }`}
+                      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded transition cursor-pointer ${
+                        isSelected
+                          ? 'ring-2 ring-gray-900 bg-opacity-80'
+                          : isHovered
+                            ? 'bg-opacity-80'
+                            : ''
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className={`font-medium ${config.text} text-sm`}>{error.issue}</p>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{error.text_reference}</p>
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                            {error.text_reference}
+                          </p>
                         </div>
-                        <span className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}>
+                        <span
+                          className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}
+                        >
                           {error.severity}
                         </span>
                       </div>
@@ -528,21 +688,27 @@ export default function AnalysisDetails() {
           {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
             <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
-                <h3 className="font-semibold text-gray-900 mb-4">Applicable Laws</h3>
+                <div className="mb-4 flex items-center gap-3">
+                  <h3 className="font-semibold text-gray-900">Applicable Laws</h3>
+                  <AiBadge />
+                </div>
                 <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                  {(
+                  {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     ((analysis?.legal_analysis_result as any)?.applicable_laws as any[]).map(
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       (law: any, idx: number) => (
-                        <div key={idx} className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded">
+                        <div
+                          key={idx}
+                          className="border-l-4 border-blue-300 bg-blue-50 p-3 rounded"
+                        >
                           <p className="font-medium text-sm text-gray-900">{law.law}</p>
                           <p className="text-xs text-gray-600 mt-1">{law.reference}</p>
                           <p className="text-sm text-gray-700 mt-2">{law.description}</p>
                         </div>
-                      )
+                      ),
                     )
-                  )}
+                  }
                 </div>
               </CardContent>
             </Card>
@@ -605,7 +771,9 @@ export default function AnalysisDetails() {
                         <div className="inline-block">
                           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
                         </div>
-                        <p className="mt-3 text-sm text-gray-700 font-medium">Loading document...</p>
+                        <p className="mt-3 text-sm text-gray-700 font-medium">
+                          Loading document...
+                        </p>
                       </div>
                     </div>
                   )}
