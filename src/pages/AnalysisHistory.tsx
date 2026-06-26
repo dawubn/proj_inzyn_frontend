@@ -46,12 +46,13 @@ export default function AnalysisHistory() {
   const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
 
   const filteredAnalyses = useMemo(() => {
+    const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
     if (!search.trim()) {
       return allAnalyses;
     }
     const q = search.toLowerCase();
     return allAnalyses.filter((a) => a.id.toLowerCase().includes(q));
-  }, [allAnalyses, search]);
+  }, [allAnalysesRaw, search]);
 
   const renderStatusBadge = (label: string) => {
     const normalized = label.toLowerCase();

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Edit, Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
+import { Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
 import type { DocumentAnalysisResponse, DocumentResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 import { getDocumentTypeLabel, patchDocumentType, confirmDocumentType, triggerLegalAnalysis } from '@/api/documents-wrapper';
@@ -12,20 +12,19 @@ import 'tiff.js';
 
 const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> = {
   critical: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
-  error:    { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
-  high:     { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
-  warning:  { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
-  medium:   { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
-  info:     { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' },
-  low:      { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' },
+  error: { bg: 'bg-red-50', border: 'border-red-300', text: 'text-red-700', badge: 'bg-red-100 text-red-800' },
+  high: { bg: 'bg-orange-50', border: 'border-orange-300', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-800' },
+  warning: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
+  medium: { bg: 'bg-yellow-50', border: 'border-yellow-300', text: 'text-yellow-700', badge: 'bg-yellow-100 text-yellow-800' },
+  info: { bg: 'bg-blue-50', border: 'border-blue-300', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-800' },
+  low: { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-800' },
 };
 
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  const [filterSeverity, setFilterSeverity] = useState<'all' | 'error' | 'warning' | 'info'>('all');
+  const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
   const [hoveredErrorIndex, setHoveredErrorIndex] = useState<number | null>(null);
@@ -166,6 +165,11 @@ export default function AnalysisDetails() {
       bbox: findBboxForError(error)
     }));
   }, [errors, findBboxForError]);
+
+  const availableSeverities = useMemo(() => {
+    const severities = new Set(enrichedErrors.map(e => e.severity));
+    return ['all', ...Array.from(severities).sort()];
+  }, [enrichedErrors]);
 
   const filteredErrors = enrichedErrors.filter((error) => {
     const matchesSeverity = filterSeverity === 'all' || error.severity === filterSeverity;
@@ -398,22 +402,17 @@ export default function AnalysisDetails() {
                     <Copy size={14} className="flex-shrink-0" />
                   </button>
                 </div>
-                <div className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
-                  analysis.status === 'completed' ? 'bg-green-100 text-green-800' :
+                <div className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${analysis.status === 'completed' ? 'bg-green-100 text-green-800' :
                   analysis.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                  analysis.status === 'ocr_failed' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
+                    analysis.status === 'ocr_failed' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                  }`}>
                   {analysis.status.charAt(0).toUpperCase() + analysis.status.slice(1).replace(/_/g, ' ')}
                 </div>
               </div>
             )}
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Edit size={16} />
-              Edit
-            </Button>
             <Button
               variant="destructive"
               size="sm"
@@ -440,9 +439,14 @@ export default function AnalysisDetails() {
               <Trash2 size={16} />
               {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => navigate(`/analysis/${analysisId}/ocr`)}
+            >
               <FileText size={16} />
-              Open analysis report
+              View Extracted Text
             </Button>
             <Button
               variant="outline"
@@ -471,8 +475,9 @@ export default function AnalysisDetails() {
                 className="mb-4 border-gray-300"
               />
 
-              <div className="flex gap-2 mb-6">
-                {(['all', 'error', 'warning', 'info'] as const).map((severity) => (
+              {/* Filter Tabs */}
+              <div className="flex gap-2 mb-6 flex-wrap">
+                {availableSeverities.map((severity) => (
                   <button
                     key={severity}
                     onClick={() => setFilterSeverity(severity)}

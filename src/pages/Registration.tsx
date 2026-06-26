@@ -36,12 +36,12 @@ export default function Register() {
     }
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const regResponse = await registerMutation.mutateAsync({
         email,
         password,
         full_name: fullName.trim(),
         role: 'business_user',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any;
 
       if (regResponse?.status === 409) {
