@@ -43,8 +43,6 @@ export default function AnalysisHistory() {
     return map;
   }, [allDocuments]);
 
-  const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
-
   const filteredAnalyses = useMemo(() => {
     const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
     if (!search.trim()) {
