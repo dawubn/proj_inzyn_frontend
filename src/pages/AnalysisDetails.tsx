@@ -4,7 +4,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-<<<<<<< HEAD
 import { Trash2, FileText, Copy, CloudAlert } from 'lucide-react';
 import type { DocumentAnalysisResponse, DocumentResponse } from '@/api/generated/model';
 import { deleteRedactionApiV1RedactionsAnalysisIdDelete, useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
@@ -26,7 +25,6 @@ export default function AnalysisDetails() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-<<<<<<< HEAD
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [imageError, setImageError] = useState<string | null>(null);
