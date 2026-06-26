@@ -1,11 +1,18 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 
 import { useFileSelection } from '@/hooks/analysis/useFileSelection';
 import { useDocumentAnalysis } from '@/hooks/analysis/useDocumentAnalysis';
-import { getTotalFileSize, fetchDocuments, triggerLegalAnalysis, getAnalysisStatus } from '@/api/documents-wrapper';
+import {
+  getTotalFileSize,
+  fetchDocuments,
+  triggerLegalAnalysis,
+  getAnalysisStatus,
+  DOCUMENT_TYPE_LABELS,
+  getDocumentTypeLabel,
+} from '@/api/documents-wrapper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,11 +26,14 @@ import {
 
 export default function DocumentAnalysis() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const resumeAnalysisId = searchParams.get('resume');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedDocId, setSelectedDocId] = useState('');
-  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(resumeAnalysisId);
+  const [isAnalyzing, setIsAnalyzing] = useState(!!resumeAnalysisId);
   const [analysisError, setAnalysisError] = useState('');
+  const [documentTypeChoice, setDocumentTypeChoice] = useState<string>('auto');
 
   const lastDocumentRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +50,6 @@ export default function DocumentAnalysis() {
 
   const { isPending, startAnalysis, analysisId } = useDocumentAnalysis();
 
-  // Fetch documents with infinite scroll
   const {
     data: documentsData,
     isLoading: docsLoading,
@@ -55,7 +64,6 @@ export default function DocumentAnalysis() {
 
   const documents = documentsData?.pages.flatMap((page) => page.items) || [];
 
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -78,16 +86,13 @@ export default function DocumentAnalysis() {
     };
   }, [hasNextPage, fetchNextPage]);
 
-  // Current analysis ID (from either upload or button)
   const currentAnalysisId = analysisId || selectedAnalysisId;
 
-  // Handle button-triggered analysis
   const handleSetAnalysisId = (id: string) => {
     setSelectedAnalysisId(id);
     setIsAnalyzing(true);
   };
 
-  // Poll analysis status (for both button-triggered and file-upload-triggered analyses)
   const { data: analysisStatus } = useQuery({
     queryKey: ['analysis-status', currentAnalysisId],
     queryFn: () => getAnalysisStatus(currentAnalysisId!),
@@ -97,7 +102,6 @@ export default function DocumentAnalysis() {
     staleTime: 0,
   });
 
-  // Update analyzing state based on analysis status
   useEffect(() => {
     if (analysisStatus) {
       if (analysisStatus.status === 'completed' || analysisStatus.status.includes('failed')) {
@@ -106,12 +110,12 @@ export default function DocumentAnalysis() {
     }
   }, [analysisStatus]);
 
-  // Navigate to analysis details when completed
   useEffect(() => {
     if (analysisStatus?.status === 'completed' && currentAnalysisId) {
-      navigate(`/analysis/${currentAnalysisId}`);
+      const params = documentTypeChoice !== 'auto' ? `?docType=${documentTypeChoice}` : '';
+      navigate(`/analysis/${currentAnalysisId}${params}`);
     }
-  }, [analysisStatus?.status, currentAnalysisId, navigate]);
+  }, [analysisStatus?.status, currentAnalysisId, navigate, documentTypeChoice]);
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
@@ -138,40 +142,7 @@ export default function DocumentAnalysis() {
     }
   }
 
-  // Legal analysis processing screen (for both upload and button flows)
-  if (currentAnalysisId && !analysisStatus?.status?.includes('completed')) {
-    const progressPercent = analysisStatus?.processing_step ? Math.min((analysisStatus.processing_step / 4) * 100, 95) : 0;
-    const stageLabel = analysisStatus?.processing_stage ? {
-      pending: 'Starting analysis',
-      local_ocr: 'Local OCR',
-      redaction: 'Redaction',
-      azure_ocr: 'Azure OCR',
-      llm_analysis: 'Legal Analysis',
-      completed: 'Completed',
-    }[analysisStatus.processing_stage as string] || analysisStatus.processing_stage : 'Preparing...';
-
-    return (
-      <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
-        <div className="w-full max-w-md text-center">
-          <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl">Legal Analysis</h1>
-
-          <div className="mx-auto mt-6 rounded-xl border border-[#E5E5E5] bg-white px-6 py-4 sm:mt-10 sm:px-8 sm:py-5">
-            <p className="text-sm text-gray-600">Processing stage:</p>
-            <p className="mt-2 text-base font-semibold">{stageLabel}</p>
-          </div>
-
-          <p className="mt-6 text-sm font-semibold sm:mt-8">{Math.round(progressPercent)}%</p>
-
-          <Progress value={progressPercent} className="mt-3 h-3 bg-gray-200 [&>div]:bg-slate-950" />
-
-          <p className="mt-5 text-sm text-gray-700">Analyzing document...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Analysis failed screen
-  if (analysisStatus && analysisStatus.status.includes('failed')) {
+  if (analysisStatus && (analysisStatus.status.includes('failed') || analysisStatus.error_message)) {
     return (
       <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
         <div className="w-full max-w-2xl">
@@ -200,7 +171,67 @@ export default function DocumentAnalysis() {
     );
   }
 
-  // Main UI
+  if (currentAnalysisId && !analysisStatus?.status?.includes('completed')) {
+    const progressPercent = analysisStatus?.processing_step
+      ? Math.min((analysisStatus.processing_step / 4) * 100, 95)
+      : 0;
+
+    const stageLabel = analysisStatus?.processing_stage
+      ? ({
+          pending: 'Starting analysis',
+          local_ocr: 'Local OCR',
+          redaction: 'Redaction',
+          azure_ocr: 'Azure OCR',
+          llm_analysis: 'Legal Analysis',
+          completed: 'Completed',
+        }[analysisStatus.processing_stage as string] ?? analysisStatus.processing_stage)
+      : 'Preparing...';
+
+    const isClassifying =
+      analysisStatus?.processing_stage === 'azure_ocr' &&
+      (analysisStatus?.processing_step ?? 0) >= 3;
+
+    const detectedType = analysisStatus?.detected_document_type;
+    const confidence = analysisStatus?.classification_confidence;
+
+    return (
+      <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
+        <div className="w-full max-w-md text-center">
+          <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl">Legal Analysis</h1>
+
+          <div className="mx-auto mt-6 rounded-xl border border-[#E5E5E5] bg-white px-6 py-4 sm:mt-10 sm:px-8 sm:py-5">
+            <p className="text-sm text-gray-600">Processing stage:</p>
+            <p className="mt-2 text-base font-semibold">{stageLabel}</p>
+
+            {isClassifying && !detectedType && (
+              <p className="mt-3 text-sm text-gray-500">Detecting document type...</p>
+            )}
+
+            {detectedType && detectedType !== 'unknown' && (
+              <div className="mt-3 rounded-lg bg-gray-50 px-4 py-2 text-sm">
+                <span className="text-gray-500">Detected type: </span>
+                <span className="font-semibold text-gray-900">{getDocumentTypeLabel(detectedType)}</span>
+                {confidence != null && (
+                  <span className="ml-1 text-gray-400">({Math.round(confidence * 100)}%)</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <p className="mt-6 text-sm font-semibold sm:mt-8">{Math.round(progressPercent)}%</p>
+
+          <Progress value={progressPercent} className="mt-3 h-3 bg-gray-200 [&>div]:bg-slate-950" />
+
+          <p className="mt-5 text-sm text-gray-700">Analyzing document...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const documentTypeOptions = Object.entries(DOCUMENT_TYPE_LABELS).filter(
+    ([key]) => key !== 'unknown' && key !== 'other'
+  );
+
   return (
     <div className="flex w-full items-start justify-center px-2 pt-16 pb-4 sm:items-center sm:px-4 sm:pt-12 sm:pb-6">
       <Card className="w-full max-w-3xl border border-[#E5E5E5] bg-[#F5F5F5] shadow-sm ring-0">
@@ -208,6 +239,25 @@ export default function DocumentAnalysis() {
           <h1 className="text-center text-2xl font-bold text-[#111111] sm:text-3xl lg:text-4xl">
             Document Analysis
           </h1>
+
+          {/* Document type selection */}
+          <div className="mx-auto mt-6 w-full max-w-sm sm:mt-8">
+            <label className="block text-sm font-semibold text-[#111111] mb-2">
+              Document Type
+            </label>
+            <Select value={documentTypeChoice} onValueChange={setDocumentTypeChoice}>
+              <SelectTrigger className="w-full border border-[#333] bg-white text-[#111111]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white max-h-72 overflow-y-auto">
+                {documentTypeOptions.map(([key, label]) => (
+                  <SelectItem key={key} value={key} className="hover:bg-gray-100 cursor-pointer">
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Upload section */}
           <div

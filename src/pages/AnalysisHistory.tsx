@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { getStatusConfig } from '@/api/documents-wrapper';
+import { getStatusConfig, getDocumentTypeLabel } from '@/api/documents-wrapper';
 import { formatDate } from '@/lib/formatters';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 
@@ -135,7 +135,9 @@ export default function AnalysisHistory() {
                           </div>
 
                           <div className="w-40">
-                            <p className="text-[11px] sm:text-xs text-[#374151]">—</p>
+                            <p className="text-[11px] sm:text-xs text-[#374151]">
+                              {getDocumentTypeLabel(analysis.detected_document_type)}
+                            </p>
                           </div>
 
                           <div className="w-40">{renderStatusBadge(cfg.label)}</div>

@@ -18,7 +18,8 @@ export default function Dashboard() {
   const { data: allAnalysesRaw, isLoading: isRedactionsLoading } = useQuery<DashboardAnalysis[]>({
     queryKey: ['dashboard-analyses'],
     queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS) as Promise<DashboardAnalysis[]>,
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];

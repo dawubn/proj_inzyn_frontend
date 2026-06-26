@@ -39,6 +39,7 @@ export interface DashboardAnalysis {
   status: string;
   created_at: string;
   processing_stage?: string;
+  detected_document_type?: string | null;
   irregularities_count?: {
     critical?: number;
     high?: number;
