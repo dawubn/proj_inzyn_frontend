@@ -29,7 +29,6 @@ export default function OcrResultsDetailed() {
   const extractFullText = (): string => {
     if (!ocrResult) return '';
 
-    // Azure Document Intelligence v4 format - build from paragraphs grouped by page
     if (Array.isArray(ocrResult.paragraphs)) {
       const textByPage: string[] = [];
 
@@ -52,26 +51,22 @@ export default function OcrResultsDetailed() {
       return textByPage.join('\n\n--- PAGE BREAK ---\n\n');
     }
 
-    // Fallback to direct content property
     if (typeof ocrResult.content === 'string') {
       return ocrResult.content;
     }
 
-    // Azure Form Recognizer v3 format (analyzeResult.readResults)
     if (ocrResult.analyzeResult?.readResults) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ocrResult.analyzeResult.readResults.flatMap((page: any) => page.lines?.map((line: any) => line.text) || [])
         .join('\n');
     }
 
-    // Alternative: array of pages with lines
     if (Array.isArray(ocrResult)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ocrResult.flatMap((page: any) => page.lines?.map((line: any) => line.text) || [])
         .join('\n');
     }
 
-    // Check if has readResults directly
     if (Array.isArray(ocrResult.readResults)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return ocrResult.readResults.flatMap((page: any) => page.lines?.map((line: any) => line.text) || [])
@@ -84,12 +79,10 @@ export default function OcrResultsDetailed() {
   const getPageCount = (): number => {
     if (!ocrResult) return 0;
 
-    // Azure Document Intelligence v4 - has pages array
     if (Array.isArray(ocrResult.pages)) {
       return ocrResult.pages.length;
     }
 
-    // Azure Form Recognizer v3 - has analyzeResult.readResults
     const pages = ocrResult.analyzeResult?.readResults || ocrResult.readResults || (Array.isArray(ocrResult) ? ocrResult : null);
     return pages?.length || 0;
   };
@@ -97,12 +90,10 @@ export default function OcrResultsDetailed() {
   const getWordCount = (): number => {
     if (!ocrResult) return 0;
 
-    // Azure Document Intelligence v4 - count words from content
     if (typeof ocrResult.content === 'string') {
       return ocrResult.content.split(/\s+/).filter((w: string) => w.length > 0).length;
     }
 
-    // Azure Form Recognizer v3 - count from pages
     const pages = ocrResult.analyzeResult?.readResults || ocrResult.readResults || (Array.isArray(ocrResult) ? ocrResult : null);
     if (!pages) return 0;
 
@@ -129,8 +120,7 @@ export default function OcrResultsDetailed() {
 
   return (
     <div className="h-full bg-white flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
+      <div className="border-b border-gray-200 px-6 py-4 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -144,7 +134,6 @@ export default function OcrResultsDetailed() {
         </div>
       </div>
 
-      {/* Stats Bar */}
       <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0 bg-gray-50">
         <div className="flex gap-6 text-sm">
           <div>
@@ -166,7 +155,6 @@ export default function OcrResultsDetailed() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-6 pb-12">
           {/* Full Text Card */}
@@ -195,7 +183,6 @@ export default function OcrResultsDetailed() {
             </CardContent>
           </Card>
 
-          {/* Detailed Breakdown - Page Breakdown */}
           {ocrResult && (
             <Card className="border border-gray-200 bg-white shadow-none mb-6">
               <CardContent className="p-6">
@@ -244,7 +231,6 @@ export default function OcrResultsDetailed() {
             </Card>
           )}
 
-          {/* Raw OCR JSON */}
           {ocrResult && (
             <Card className="border border-gray-200 bg-white shadow-none">
               <CardContent className="p-6">
