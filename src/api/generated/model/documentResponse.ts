@@ -19,5 +19,6 @@ export interface DocumentResponse {
   mime_type: string;
   status: DocumentStatus;
   document_type: DocumentType;
+  suggested_document_type: string | null;
   description: string | null;
 }
