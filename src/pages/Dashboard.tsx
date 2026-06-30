@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -12,17 +13,23 @@ const MAX_ANALYSES_IN_LIST = 10;
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useMe();
+  const [isLastAnalysisRefreshing, setIsLastAnalysisRefreshing] = useState(false);
 
   const userName = user?.full_name?.trim() || user?.email || '';
 
-  const { data: allAnalysesRaw, isLoading: isRedactionsLoading } = useQuery<DashboardAnalysis[]>({
+  const {
+    data: allAnalysesRaw,
+    isLoading: isRedactionsLoading,
+    refetch: refetchAnalyses,
+  } = useQuery<DashboardAnalysis[]>({
     queryKey: ['dashboard-analyses'],
     queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS) as Promise<DashboardAnalysis[]>,
     staleTime: 0,
     refetchOnMount: 'always',
   });
 
-  const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
+  const allAnalyses: DashboardAnalysis[] =
+    isLastAnalysisRefreshing || !Array.isArray(allAnalysesRaw) ? [] : allAnalysesRaw;
 
   const analyses: DashboardAnalysis[] = allAnalyses.slice(0, MAX_ANALYSES_IN_LIST);
 
@@ -60,6 +67,14 @@ export default function Dashboard() {
 
   const completedAnalyses = analysesWithLabels.filter(({ label }) => isCompleted(label)).length;
 
+  const handleRefreshLastAnalysis = async () => {
+    setIsLastAnalysisRefreshing(true);
+    await refetchAnalyses();
+    setIsLastAnalysisRefreshing(false);
+  };
+
+  const lastAnalysisLoading = isRedactionsLoading || isLastAnalysisRefreshing;
+
   return (
     <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
@@ -81,9 +96,26 @@ export default function Dashboard() {
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-12 lg:min-h-0 lg:flex-1 lg:grid-cols-[1.22fr_1fr] lg:items-stretch">
           <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-4 lg:flex lg:flex-col lg:h-full">
-            <h2 className="text-base sm:text-lg font-semibold text-[#111111]">Last analysis</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base sm:text-lg font-semibold text-[#111111]">Last analysis</h2>
+              <button
+                type="button"
+                onClick={handleRefreshLastAnalysis}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6]"
+                aria-label="Refresh last analyses"
+                disabled={isLastAnalysisRefreshing}
+              >
+                <span
+                  className={`text-sm font-bold ${isLastAnalysisRefreshing ? 'animate-spin' : ''}`}
+                  style={{ display: 'inline-block' }}
+                >
+                  ⟳
+                </span>
+              </button>
+            </div>
+
             <div className="mt-3 flex-1 overflow-y-auto min-h-0">
-              {isRedactionsLoading ? (
+              {lastAnalysisLoading ? (
                 <p className="text-xs sm:text-sm text-[#737373]">Loading...</p>
               ) : analyses.length === 0 ? (
                 <p className="text-xs sm:text-sm text-[#737373]">No analysis yet.</p>
@@ -91,7 +123,10 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   {analyses.map((analysis) => {
                     const cfg = getStatusConfig(analysis.status);
-                    const title = `Analysis ${analysis.id.slice(0, 8)}...`;
+
+                    const shortId = analysis.id.slice(0, 8);
+                    const baseName = `Analysis ${shortId}`;
+                    const title = `${baseName} (ID: ${shortId})`;
 
                     return (
                       <div
