@@ -25,50 +25,50 @@ import {
 import 'tiff.js';
 
 const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> =
-  {
-    critical: {
-      bg: 'bg-red-50',
-      border: 'border-red-300',
-      text: 'text-red-700',
-      badge: 'bg-red-100 text-red-800',
-    },
-    error: {
-      bg: 'bg-red-50',
-      border: 'border-red-300',
-      text: 'text-red-700',
-      badge: 'bg-red-100 text-red-800',
-    },
-    high: {
-      bg: 'bg-orange-50',
-      border: 'border-orange-300',
-      text: 'text-orange-700',
-      badge: 'bg-orange-100 text-orange-800',
-    },
-    warning: {
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-300',
-      text: 'text-yellow-700',
-      badge: 'bg-yellow-100 text-yellow-800',
-    },
-    medium: {
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-300',
-      text: 'text-yellow-700',
-      badge: 'bg-yellow-100 text-yellow-800',
-    },
-    info: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-300',
-      text: 'text-blue-700',
-      badge: 'bg-blue-100 text-blue-800',
-    },
-    low: {
-      bg: 'bg-gray-50',
-      border: 'border-gray-300',
-      text: 'text-gray-700',
-      badge: 'bg-gray-100 text-gray-800',
-    },
-  };
+{
+  critical: {
+    bg: 'bg-red-50',
+    border: 'border-red-300',
+    text: 'text-red-700',
+    badge: 'bg-red-100 text-red-800',
+  },
+  error: {
+    bg: 'bg-red-50',
+    border: 'border-red-300',
+    text: 'text-red-700',
+    badge: 'bg-red-100 text-red-800',
+  },
+  high: {
+    bg: 'bg-orange-50',
+    border: 'border-orange-300',
+    text: 'text-orange-700',
+    badge: 'bg-orange-100 text-orange-800',
+  },
+  warning: {
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-300',
+    text: 'text-yellow-700',
+    badge: 'bg-yellow-100 text-yellow-800',
+  },
+  medium: {
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-300',
+    text: 'text-yellow-700',
+    badge: 'bg-yellow-100 text-yellow-800',
+  },
+  info: {
+    bg: 'bg-blue-50',
+    border: 'border-blue-300',
+    text: 'text-blue-700',
+    badge: 'bg-blue-100 text-blue-800',
+  },
+  low: {
+    bg: 'bg-gray-50',
+    border: 'border-gray-300',
+    text: 'text-gray-700',
+    badge: 'bg-gray-100 text-gray-800',
+  },
+};
 
 function AiBadge() {
   return (
@@ -143,7 +143,7 @@ export default function AnalysisDetails() {
       .then((data) => {
         if (data) setDocInfo(data);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [analysis?.document_id]);
 
   const [bubbleDismissed, setBubbleDismissed] = useState(false);
@@ -405,7 +405,7 @@ export default function AnalysisDetails() {
   return (
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0">
+      <div className="border-b border-gray-200 px-6 py-3 shrink-0">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900">Document Analysis</h1>
@@ -413,7 +413,7 @@ export default function AnalysisDetails() {
 
             {showBubble && !showRerunConfirm && (
               <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
-                <CloudAlert size={15} className="text-blue-500 flex-shrink-0" />
+                <CloudAlert size={15} className="text-blue-500 shrink-0" />
                 <span className="text-blue-700">
                   Suggested type: <strong>{getDocumentTypeLabel(suggestedType)}</strong>
                   {confidence != null && (
@@ -438,7 +438,7 @@ export default function AnalysisDetails() {
             {showBubble && showRerunConfirm && (
               <div className="mt-2 inline-flex flex-col gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <CloudAlert size={15} className="text-blue-500 flex-shrink-0" />
+                  <CloudAlert size={15} className="text-blue-500 shrink-0" />
                   <span className="text-blue-700">
                     Re-run analysis as <strong>{getDocumentTypeLabel(suggestedType)}</strong>?
                   </span>
@@ -480,7 +480,7 @@ export default function AnalysisDetails() {
                     title="Click to copy"
                   >
                     <span className="font-mono text-xs text-gray-900">{analysis.document_id}</span>
-                    <Copy size={14} className="flex-shrink-0" />
+                    <Copy size={14} className="shrink-0" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
@@ -491,19 +491,18 @@ export default function AnalysisDetails() {
                     title="Click to copy"
                   >
                     <span className="font-mono text-xs text-gray-900">{analysis.id}</span>
-                    <Copy size={14} className="flex-shrink-0" />
+                    <Copy size={14} className="shrink-0" />
                   </button>
                 </div>
                 <div
-                  className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
-                    analysis.status === 'completed'
-                      ? 'bg-green-100 text-green-800'
-                      : analysis.status === 'in_progress'
-                        ? 'bg-blue-100 text-blue-800'
-                        : analysis.status === 'ocr_failed'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                  }`}
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${analysis.status === 'completed'
+                    ? 'bg-green-100 text-green-800'
+                    : analysis.status === 'in_progress'
+                      ? 'bg-blue-100 text-blue-800'
+                      : analysis.status === 'ocr_failed'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
                 >
                   {analysis.status.charAt(0).toUpperCase() +
                     analysis.status.slice(1).replace(/_/g, ' ')}
@@ -556,10 +555,8 @@ export default function AnalysisDetails() {
 
       {/* Main Content */}
       <div className="flex gap-6 px-6 py-3 flex-1 min-h-0 overflow-hidden">
-        {/* Left Panel - Issues List & Applicable Laws */}
-        <div className="w-96 flex-shrink-0 flex flex-col gap-6 min-h-0 overflow-hidden">
-          {/* Formal Issues Card */}
-          <Card className="border border-gray-200 bg-white shadow-none flex-shrink-0 max-h-80">
+        <div className="w-96 shrink-0 flex flex-col gap-6 min-h-0 overflow-hidden">
+          <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-80">
             <CardContent className="p-6 flex flex-col max-h-80">
               <h2 className="mb-4 font-semibold text-gray-900">Formal Issues</h2>
 
@@ -631,11 +628,10 @@ export default function AnalysisDetails() {
                   <button
                     key={severity}
                     onClick={() => setFilterSeverity(severity)}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition ${
-                      filterSeverity === severity
-                        ? 'bg-gray-900 text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition ${filterSeverity === severity
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                      }`}
                   >
                     {severity.charAt(0).toUpperCase() + severity.slice(1)}
                   </button>
@@ -655,13 +651,12 @@ export default function AnalysisDetails() {
                       onMouseEnter={() => setHoveredErrorIndex(originalIdx)}
                       onMouseLeave={() => setHoveredErrorIndex(null)}
                       onClick={() => setSelectedErrorIndex(isSelected ? null : originalIdx)}
-                      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded transition cursor-pointer ${
-                        isSelected
-                          ? 'ring-2 ring-gray-900 bg-opacity-80'
-                          : isHovered
-                            ? 'bg-opacity-80'
-                            : ''
-                      }`}
+                      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded transition cursor-pointer ${isSelected
+                        ? 'ring-2 ring-gray-900 bg-opacity-80'
+                        : isHovered
+                          ? 'bg-opacity-80'
+                          : ''
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -683,7 +678,6 @@ export default function AnalysisDetails() {
             </CardContent>
           </Card>
 
-          {/* Applicable Laws Card */}
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
             <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
@@ -720,9 +714,12 @@ export default function AnalysisDetails() {
           {/* Summary */}
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.summary as string) && (
-            <Card className="border border-gray-200 bg-gray-50 flex-shrink-0 max-h-32 overflow-y-auto">
+            <Card className="border border-gray-200 bg-gray-50 shrink-0 max-h-32 overflow-y-auto">
               <CardContent className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Summary</h3>
+                <div className="mb-4 flex items-center gap-3">
+                  <h2 className="font-semibold text-gray-900">Summary</h2>
+                  <AiBadge />
+                </div>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {(analysis?.legal_analysis_result as any)?.summary}

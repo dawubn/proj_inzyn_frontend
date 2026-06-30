@@ -153,14 +153,14 @@ export default function AppLayout() {
                 <div className="space-y-1">{menuItems.slice(0, 4).map(renderMenuButton)}</div>
               </div>
 
-              <div>
+              {/* <div>
                 <p className="mb-2 text-xs font-semibold text-gray-500">Account</p>
                 {renderMenuButton({
                   label: 'Account details',
                   path: '/account-details',
                   icon: User,
                 })}
-              </div>
+              </div> */}
             </nav>
 
             <div className="absolute bottom-6 left-6 right-6">
