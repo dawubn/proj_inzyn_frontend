@@ -39,7 +39,6 @@ export default function AnalysisHistory() {
     staleTime: 30_000,
   });
 
-  // Normalizujemy dane pod hard refresh i typy
   const allAnalyses: DashboardAnalysis[] = useMemo(
     () =>
       isHardRefreshing || !Array.isArray(allAnalysesRaw)
