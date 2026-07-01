@@ -10,18 +10,20 @@ import type { DocumentResponse } from '@/api/generated/model';
 export default function AnalysisHistory() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [isHardRefreshing, setIsHardRefreshing] = useState(false);
 
   const {
     data: allAnalysesRaw,
     isLoading,
     isError,
+    refetch: refetchAnalyses,
   } = useQuery<DashboardAnalysis[]>({
     queryKey: ['analysis-history'],
     queryFn: () => fetchDashboardAnalyses(1000) as Promise<DashboardAnalysis[]>,
     staleTime: 60_000,
   });
 
-  const { data: allDocuments } = useQuery({
+  const { data: allDocumentsRaw, refetch: refetchDocuments } = useQuery<DocumentResponse[]>({
     queryKey: ['user-documents-all'],
     queryFn: async () => {
       let page = 1;
@@ -37,20 +39,43 @@ export default function AnalysisHistory() {
     staleTime: 30_000,
   });
 
+  const allAnalyses: DashboardAnalysis[] = useMemo(
+    () =>
+      isHardRefreshing || !Array.isArray(allAnalysesRaw)
+        ? []
+        : (allAnalysesRaw as DashboardAnalysis[]),
+    [isHardRefreshing, allAnalysesRaw],
+  );
+
+  const allDocuments: DocumentResponse[] = useMemo(
+    () =>
+      isHardRefreshing || !Array.isArray(allDocumentsRaw)
+        ? []
+        : (allDocumentsRaw as DocumentResponse[]),
+    [isHardRefreshing, allDocumentsRaw],
+  );
+
   const documentMap = useMemo(() => {
     const map = new Map<string, DocumentResponse>();
-    allDocuments?.forEach(doc => map.set(doc.id, doc));
+    allDocuments.forEach((doc) => map.set(doc.id, doc));
     return map;
   }, [allDocuments]);
 
   const filteredAnalyses = useMemo(() => {
-    const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
     if (!search.trim()) {
       return allAnalyses;
     }
+
     const q = search.toLowerCase();
-    return allAnalyses.filter((a) => a.id.toLowerCase().includes(q));
-  }, [allAnalysesRaw, search]);
+
+    return allAnalyses.filter((analysis) => {
+      const doc = documentMap.get(analysis.document_id);
+      const shortId = analysis.id.slice(0, 8);
+      const baseName = doc?.original_filename ?? `Analysis ${shortId}`;
+      const title = `${baseName} (ID: ${shortId})`;
+      return title.toLowerCase().includes(q);
+    });
+  }, [allAnalyses, documentMap, search]);
 
   const renderStatusBadge = (label: string) => {
     const normalized = label.toLowerCase();
@@ -78,6 +103,14 @@ export default function AnalysisHistory() {
     );
   };
 
+  const handleRefresh = async () => {
+    setIsHardRefreshing(true);
+    await Promise.all([refetchAnalyses(), refetchDocuments()]);
+    setIsHardRefreshing(false);
+  };
+
+  const showLoading = isLoading || isHardRefreshing;
+
   return (
     <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
@@ -90,18 +123,38 @@ export default function AnalysisHistory() {
 
         <div className="mt-10 rounded-lg border border-[#E5E5E5] bg-[#FFFFFF] p-4 shadow-sm h-auto">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-sm font-semibold text-[#111827]">All analyses</h2>
-              <div className="flex w-full max-w-xs items-center rounded-full border border-[#E5E7EB] bg-white px-3 py-2">
-                <input
-                  type="text"
-                  className="w-full bg-transparent text-xs sm:text-sm text-[#111827] placeholder:text-[#6B7280] focus:outline-none"
-                  placeholder="Search by document name..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                  }}
-                />
+            <div className="flex items-center gap-4">
+              <h2 className="text-sm font-semibold text-[#111827] whitespace-nowrap">
+                All analyses
+              </h2>
+
+              <div className="flex flex-1 items-center justify-end gap-2">
+                <div className="flex w-[220px] sm:w-[280px] items-center rounded-full border border-[#E5E5E5] bg-white px-3 py-2">
+                  <input
+                    type="text"
+                    className="w-full bg-transparent text-xs sm:text-sm text-[#111827] placeholder:text-[#6B7280] focus:outline-none"
+                    placeholder="Search by document name..."
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6]"
+                  aria-label="Refresh list"
+                  disabled={isHardRefreshing}
+                >
+                  <span
+                    className={`text-sm font-bold ${isHardRefreshing ? 'animate-spin' : ''}`}
+                    style={{ display: 'inline-block' }}
+                  >
+                    ⟳
+                  </span>
+                </button>
               </div>
             </div>
 
@@ -124,7 +177,7 @@ export default function AnalysisHistory() {
                 </div>
 
                 <div className="divide-y divide-[#E5E7EB]">
-                  {isLoading ? (
+                  {showLoading ? (
                     <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-[#737373]">
                       Loading...
                     </div>
@@ -139,8 +192,20 @@ export default function AnalysisHistory() {
                   ) : (
                     filteredAnalyses.map((analysis) => {
                       const cfg = getStatusConfig(analysis.status);
-                      const title = `Analysis ${analysis.id.slice(0, 8)}...`;
+                      const doc = documentMap.get(analysis.document_id);
+
+                      const shortId = analysis.id.slice(0, 8);
+                      const baseName = doc?.original_filename ?? `Analysis ${shortId}`;
+                      const title = `${baseName} (ID: ${shortId})`;
+
                       const formattedDate = formatDate(analysis.created_at);
+
+                      const docType = doc?.document_type;
+                      const displayedDocType = getDocumentTypeLabel(
+                        docType && docType !== 'unknown'
+                          ? docType
+                          : analysis.detected_document_type,
+                      );
 
                       return (
                         <div
@@ -159,12 +224,7 @@ export default function AnalysisHistory() {
 
                           <div className="w-40">
                             <p className="text-[11px] sm:text-xs text-[#374151]">
-                              {(() => {
-                                const docType = documentMap.get(analysis.document_id)?.document_type;
-                                return getDocumentTypeLabel(
-                                  docType && docType !== 'unknown' ? docType : analysis.detected_document_type
-                                );
-                              })()}
+                              {displayedDocType}
                             </p>
                           </div>
 
