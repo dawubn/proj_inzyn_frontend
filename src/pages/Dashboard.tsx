@@ -42,16 +42,6 @@ export default function Dashboard() {
     };
   });
 
-  const isFailed = (label: string) => {
-    const l = label.toLowerCase();
-    return l.includes('failed') || l.includes('error');
-  };
-
-  const isPending = (label: string) => {
-    const l = label.toLowerCase();
-    return l.includes('pending') || l.includes('progress');
-  };
-
   const isCompleted = (label: string) => {
     const l = label.toLowerCase();
     return l.includes('completed');
