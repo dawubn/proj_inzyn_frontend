@@ -66,7 +66,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0 lg:overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0">
       <header className="flex shrink-0 items-start justify-between px-8 py-6">
         <div>
           <h1
@@ -177,8 +177,8 @@ export default function AppLayout() {
         </Sheet>
       </header>
 
-      <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
-        <div className="rounded-sm bg-white lg:h-full lg:overflow-hidden">
+      <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        <div className="rounded-sm bg-white">
           <Outlet />
         </div>
       </main>

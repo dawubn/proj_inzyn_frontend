@@ -42,26 +42,28 @@ export default function Dashboard() {
     };
   });
 
-  const isFailed = (label: string) => {
-    const l = label.toLowerCase();
-    return l.includes('failed') || l.includes('error');
-  };
-
-  const isPending = (label: string) => {
-    const l = label.toLowerCase();
-    return l.includes('pending') || l.includes('progress');
-  };
-
   const isCompleted = (label: string) => {
     const l = label.toLowerCase();
     return l.includes('completed');
   };
 
-  const documentsRequiringAttention = analysesWithLabels.filter(({ label }) =>
-    isFailed(label),
+  const documentsRequiringAttention = allAnalyses.filter(
+    (analysis) =>
+      analysis.irregularities_count &&
+      (analysis.irregularities_count.critical ||
+        analysis.irregularities_count.high ||
+        analysis.irregularities_count.medium),
   ).length;
 
-  const irregularitiesDetected = analysesWithLabels.filter(({ label }) => isPending(label)).length;
+  const irregularitiesDetected = allAnalyses.reduce((sum, analysis) => {
+    if (!analysis.irregularities_count) return sum;
+    return (
+      sum +
+      (analysis.irregularities_count.critical || 0) +
+      (analysis.irregularities_count.high || 0) +
+      (analysis.irregularities_count.medium || 0)
+    );
+  }, 0);
 
   const totalAnalyses = allAnalyses.length;
 
@@ -76,8 +78,8 @@ export default function Dashboard() {
   const lastAnalysisLoading = isRedactionsLoading || isLastAnalysisRefreshing;
 
   return (
-    <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
-      <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
+    <div className="w-full max-w-full px-1 sm:px-2 lg:px-4">
+      <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:p-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-full overflow-hidden sm:max-w-[70%]">
@@ -94,7 +96,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-12 lg:min-h-0 lg:flex-1 lg:grid-cols-[1.22fr_1fr] lg:items-stretch">
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-12 lg:grid-cols-[1.22fr_1fr]">
           <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-4 lg:flex lg:flex-col lg:h-full">
             <div className="flex items-center justify-between">
               <h2 className="text-base sm:text-lg font-semibold text-[#111111]">Last analysis</h2>
