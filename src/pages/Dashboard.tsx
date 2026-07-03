@@ -57,11 +57,23 @@ export default function Dashboard() {
     return l.includes('completed');
   };
 
-  const documentsRequiringAttention = analysesWithLabels.filter(({ label }) =>
-    isFailed(label),
+  const documentsRequiringAttention = allAnalyses.filter(
+    (analysis) =>
+      analysis.irregularities_count &&
+      (analysis.irregularities_count.critical ||
+        analysis.irregularities_count.high ||
+        analysis.irregularities_count.medium),
   ).length;
 
-  const irregularitiesDetected = analysesWithLabels.filter(({ label }) => isPending(label)).length;
+  const irregularitiesDetected = allAnalyses.reduce((sum, analysis) => {
+    if (!analysis.irregularities_count) return sum;
+    return (
+      sum +
+      (analysis.irregularities_count.critical || 0) +
+      (analysis.irregularities_count.high || 0) +
+      (analysis.irregularities_count.medium || 0)
+    );
+  }, 0);
 
   const totalAnalyses = allAnalyses.length;
 
