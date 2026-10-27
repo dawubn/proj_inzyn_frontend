@@ -321,3 +321,44 @@ export async function getAnalysisStatus(analysisId: string): Promise<DocumentAna
 
   return response.data as DocumentAnalysisResponse;
 }
+
+export type PreviewVariant = 'original' | 'redacted';
+
+export interface PageInfo {
+  page: number;
+  width: number;
+  height: number;
+}
+
+export interface PagesManifest {
+  variants: PreviewVariant[];
+  pages: PageInfo[];
+}
+
+export async function fetchPagesManifest(analysisId: string): Promise<PagesManifest> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/${analysisId}/pages`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch document pages');
+  }
+
+  return response.json() as Promise<PagesManifest>;
+}
+
+export function getPageImageUrl(
+  analysisId: string,
+  page: number,
+  variant: PreviewVariant,
+  size: 'sm' | 'lg',
+): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/redactions/${analysisId}/pages/${page}/image?variant=${variant}&size=${size}`;
+}
+
+export function getDocumentDownloadUrl(documentId: string): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/documents/${documentId}/download`;
+}

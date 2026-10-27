@@ -1,15 +1,15 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Trash2, FileText, Copy, CloudAlert, Brain } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Trash2, FileText, Copy, CloudAlert, Brain, Download, ListChecks } from 'lucide-react';
 import type {
   AnalysisReportResponse,
   DocumentAnalysisResponse,
   DocumentResponse,
-  ValidationIssue,
 } from '@/api/generated/model';
 import { useGetReportApiV1ReportsAnalysisIdGet } from '@/api/generated/reports/reports';
 import {
@@ -21,54 +21,21 @@ import {
   patchDocumentType,
   confirmDocumentType,
   triggerLegalAnalysis,
+  fetchPagesManifest,
+  getDocumentDownloadUrl,
+  type PreviewVariant,
 } from '@/api/documents-wrapper';
-import 'tiff.js';
-
-const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> =
-{
-  critical: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    text: 'text-red-700',
-    badge: 'bg-red-100 text-red-800',
-  },
-  error: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    text: 'text-red-700',
-    badge: 'bg-red-100 text-red-800',
-  },
-  high: {
-    bg: 'bg-orange-50',
-    border: 'border-orange-300',
-    text: 'text-orange-700',
-    badge: 'bg-orange-100 text-orange-800',
-  },
-  warning: {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-300',
-    text: 'text-yellow-700',
-    badge: 'bg-yellow-100 text-yellow-800',
-  },
-  medium: {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-300',
-    text: 'text-yellow-700',
-    badge: 'bg-yellow-100 text-yellow-800',
-  },
-  info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-300',
-    text: 'text-blue-700',
-    badge: 'bg-blue-100 text-blue-800',
-  },
-  low: {
-    bg: 'bg-gray-50',
-    border: 'border-gray-300',
-    text: 'text-gray-700',
-    badge: 'bg-gray-100 text-gray-800',
-  },
-};
+import { DocumentViewer } from '@/features/document-viewer/DocumentViewer';
+import { IssueDetails } from '@/features/document-viewer/IssueDetails';
+import { IssueList } from '@/features/document-viewer/IssueList';
+import type { LegalIssue } from '@/features/document-viewer/types';
+import { aiToViewerIssue, formalToViewerIssue } from '@/features/document-viewer/toViewerIssue';
+import {
+  useMediaQuery,
+  DESKTOP_QUERY,
+  HOVER_QUERY,
+  REDUCED_MOTION_QUERY,
+} from '@/hooks/useMediaQuery';
 
 function AiBadge() {
   return (
@@ -85,22 +52,18 @@ export default function AnalysisDetails() {
   const queryClient = useQueryClient();
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [imageError, setImageError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [hoveredErrorIndex, setHoveredErrorIndex] = useState<number | null>(null);
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [showRerunConfirm, setShowRerunConfirm] = useState(false);
   const [isRerunning, setIsRerunning] = useState(false);
   const [bubbleError, setBubbleError] = useState<string | null>(null);
-  const [documentBlobUrl, setDocumentBlobUrl] = useState<string | null>(null);
-  const [documentMimeType, setDocumentMimeType] = useState<string | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const tiffRef = useRef<unknown>(null);
-  const blobUrlRef = useRef<string | null>(null);
+  const [requestedVariant, setRequestedVariant] = useState<PreviewVariant>('redacted');
+  const [isIssueSheetOpen, setIsIssueSheetOpen] = useState(false);
+
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const canHover = useMediaQuery(HOVER_QUERY);
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
 
   const { data: analysisData, isLoading } = useGetRedactionApiV1RedactionsAnalysisIdGet(
     analysisId || '',
@@ -192,203 +155,130 @@ export default function AnalysisDetails() {
   };
 
   const errors = useMemo(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    () => ((analysis?.legal_analysis_result as any)?.errors as any[]) || [],
+    () =>
+      ((analysis?.legal_analysis_result as { errors?: LegalIssue[] } | null | undefined)?.errors ??
+        []) as LegalIssue[],
     [analysis?.legal_analysis_result],
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const findBboxForError = useCallback(
-    (error: any): { x: number; y: number; width: number; height: number } | null => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const words = (analysis?.tesseract_words as any[]) || [];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textRef = (error as any).text_reference.toLowerCase().trim();
-      const refWords = textRef.split(/[\s\n()/-]+/).filter((w: string) => w.length > 2);
-
-      if (refWords.length === 0) {
-        return null;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const matchedWords: any[] = [];
-      const cleanedRefWords = refWords.map((w: string) => w.replace(/[^\p{L}\p{N}]/gu, ''));
-
-      for (const word of words) {
-        const wordText = word.text.toLowerCase();
-        const cleanedWord = wordText.replace(/[^\p{L}\p{N}]/gu, '');
-
-        for (const cleanedRefWord of cleanedRefWords) {
-          if (cleanedWord.includes(cleanedRefWord) || cleanedRefWord.includes(cleanedWord)) {
-            matchedWords.push(word);
-            break;
-          }
-        }
-      }
-
-      if (matchedWords.length === 0) {
-        return null;
-      }
-
-      const bboxes = matchedWords.map((w) => w.bbox);
-      const minX = Math.min(...bboxes.map((b) => b.x));
-      const minY = Math.min(...bboxes.map((b) => b.y));
-      const maxX = Math.max(...bboxes.map((b) => b.x + b.width));
-      const maxY = Math.max(...bboxes.map((b) => b.y + b.height));
-
-      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-    },
-    [analysis?.tesseract_words],
+  // AI issues first, then formal issues: one index space shared by the lists and the viewer
+  const viewerIssues = useMemo(
+    () => [...errors.map(aiToViewerIssue), ...formalIssues.map(formalToViewerIssue)],
+    [errors, formalIssues],
   );
 
-  const enrichedErrors = useMemo(() => {
-    return errors.map((error) => ({
-      ...error,
-      bbox: findBboxForError(error),
-    }));
-  }, [errors, findBboxForError]);
+  const formalItems = useMemo(
+    () =>
+      formalIssues.map((_, i) => ({
+        issue: viewerIssues[errors.length + i],
+        index: errors.length + i,
+      })),
+    [formalIssues, viewerIssues, errors.length],
+  );
 
   const availableSeverities = useMemo(() => {
-    const severities = new Set(enrichedErrors.map((e) => e.severity));
+    const severities = new Set(errors.map((e) => e.severity));
     return ['all', ...Array.from(severities).sort()];
-  }, [enrichedErrors]);
+  }, [errors]);
 
-  const filteredErrors = enrichedErrors.filter((error) => {
-    const matchesSeverity = filterSeverity === 'all' || error.severity === filterSeverity;
-    const matchesSearch = error.issue.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSeverity && matchesSearch;
+  const filteredItems = useMemo(
+    () =>
+      viewerIssues
+        .slice(0, errors.length)
+        .map((issue, index) => ({ issue, index }))
+        .filter(({ issue }) => {
+          const matchesSeverity = filterSeverity === 'all' || issue.severity === filterSeverity;
+          const matchesSearch = issue.issue.toLowerCase().includes(searchTerm.toLowerCase());
+          return matchesSeverity && matchesSearch;
+        }),
+    [viewerIssues, errors.length, filterSeverity, searchTerm],
+  );
+
+  const { data: pagesManifest, error: pagesError } = useQuery({
+    queryKey: ['pagesManifest', analysisId, analysis?.status],
+    queryFn: () => fetchPagesManifest(analysisId!),
+    enabled: !!analysisId && !!analysis,
+    staleTime: Infinity,
   });
 
+  const variants = pagesManifest?.variants ?? [];
+  const variant: PreviewVariant = variants.includes(requestedVariant)
+    ? requestedVariant
+    : (variants[0] ?? requestedVariant);
+
+  // Esc closes the mobile issue card too (the desktop popover handles Esc itself)
   useEffect(() => {
-    if (!analysis?.document_id) return;
-
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-    const loadDocument = async () => {
-      try {
-        setIsLoadingImage(true);
-        setImageError(null);
-
-        if (blobUrlRef.current) {
-          URL.revokeObjectURL(blobUrlRef.current);
-          blobUrlRef.current = null;
-        }
-
-        const response = await fetch(
-          `${apiUrl}/api/v1/documents/${analysis.document_id}/download`,
-          { credentials: 'include' },
-        );
-
-        if (!response.ok) {
-          throw new Error(`Server error: ${response.status}`);
-        }
-
-        const contentType = response.headers.get('content-type') || '';
-
-        if (
-          contentType.includes('image/tiff') ||
-          contentType.includes('application/octet-stream')
-        ) {
-          const arrayBuffer = await response.arrayBuffer();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const Tiff = (window as any).Tiff;
-          if (!Tiff) throw new Error('Tiff library not loaded');
-
-          const tiff = new Tiff({ buffer: arrayBuffer });
-          const pages = tiff.countDirectory();
-          setTotalPages(pages);
-          setCurrentPage(0);
-          tiffRef.current = tiff;
-
-          const canvas = tiff.toCanvas();
-          if (!canvas) throw new Error('Failed to render TIFF');
-
-          const canvasElement = canvasRef.current;
-          if (!canvasElement) return;
-
-          canvasElement.width = canvas.width;
-          canvasElement.height = canvas.height;
-          const ctx = canvasElement.getContext('2d');
-          if (!ctx) return;
-          ctx.drawImage(canvas, 0, 0);
-          imageRef.current = canvas;
-          setDocumentMimeType('image/tiff');
-        } else {
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          blobUrlRef.current = url;
-          setDocumentBlobUrl(url);
-          setDocumentMimeType(contentType.split(';')[0].trim());
-          setTotalPages(0);
-        }
-
-        setIsLoadingImage(false);
-      } catch (error) {
-        console.error('Error loading document:', error);
-        const errMsg =
-          error instanceof Error
-            ? error.message
-            : typeof error === 'object' && error !== null && 'message' in error
-              ? String((error as Record<string, unknown>).message)
-              : String(error);
-        setImageError(`Error: ${errMsg}`);
-        setIsLoadingImage(false);
-      }
+    if (selectedErrorIndex == null) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedErrorIndex(null);
     };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedErrorIndex]);
 
-    loadDocument();
+  const selectedIssue = selectedErrorIndex != null ? viewerIssues[selectedErrorIndex] : null;
+  // Previous/Next stay within the list the selected issue belongs to
+  const navigationItems = selectedIssue?.source === 'formal' ? formalItems : filteredItems;
+  const selectedPosition = navigationItems.findIndex((item) => item.index === selectedErrorIndex);
 
-    return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
-      }
-    };
-  }, [analysis?.document_id, errors]);
+  const selectRelative = (offset: number) => {
+    if (navigationItems.length === 0) return;
+    const current = selectedPosition === -1 ? 0 : selectedPosition;
+    const next = (current + offset + navigationItems.length) % navigationItems.length;
+    setSelectedErrorIndex(navigationItems[next].index);
+  };
 
-  useEffect(() => {
-    if (!tiffRef.current || !canvasRef.current || totalPages === 0) return;
+  const selectedIssueDetails = selectedIssue && (
+    <IssueDetails
+      issue={selectedIssue}
+      position={selectedPosition + 1}
+      total={navigationItems.length}
+      onPrevious={() => selectRelative(-1)}
+      onNext={() => selectRelative(1)}
+      onClose={() => setSelectedErrorIndex(null)}
+    />
+  );
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const tiff = tiffRef.current as any;
-      tiff.setDirectory(currentPage);
-      const canvas = tiff.toCanvas();
+  const issueListProps = {
+    hoveredIndex: hoveredErrorIndex,
+    selectedIndex: selectedErrorIndex,
+    canHover,
+    reducedMotion,
+    onHover: setHoveredErrorIndex,
+    onSelect: (index: number | null) => {
+      setSelectedErrorIndex(index);
+      if (index != null) setIsIssueSheetOpen(false);
+    },
+  };
+  const issueList = <IssueList items={filteredItems} {...issueListProps} />;
+  const formalIssueList = <IssueList items={formalItems} {...issueListProps} />;
 
-      if (!canvas) return;
+  const issueFilters = (
+    <>
+      <Input
+        placeholder="Search alert"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="mb-4 border-gray-300"
+      />
 
-      const canvasElement = canvasRef.current;
-      canvasElement.width = canvas.width;
-      canvasElement.height = canvas.height;
-
-      const ctx = canvasElement.getContext('2d');
-      if (!ctx) return;
-
-      ctx.drawImage(canvas, 0, 0);
-      imageRef.current = canvas;
-    } catch (error) {
-      console.error('Error rendering page:', error);
-    }
-  }, [currentPage, totalPages]);
-
-  useEffect(() => {
-    if (!canvasRef.current || !imageRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    if (imageRef.current instanceof HTMLCanvasElement) {
-      ctx.drawImage(imageRef.current, 0, 0);
-    }
-
-    // TODO: Fix highlight positioning - temporarily disabled
-    /*
-    enrichedErrors.forEach((error: any, idx: number) => {
-      ...
-    });
-    */
-  }, [hoveredErrorIndex, selectedErrorIndex, enrichedErrors]);
+      {/* Filter Tabs */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {availableSeverities.map((severity) => (
+          <button
+            key={severity}
+            onClick={() => setFilterSeverity(severity)}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition ${filterSeverity === severity
+              ? 'bg-gray-900 text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+              }`}
+          >
+            {severity.charAt(0).toUpperCase() + severity.slice(1)}
+          </button>
+        ))}
+      </div>
+    </>
+  );
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -405,10 +295,10 @@ export default function AnalysisDetails() {
   return (
     <div className="bg-white flex flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 py-3 shrink-0">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">Document Analysis</h1>
+      <div className="border-b border-gray-200 px-0 py-3 shrink-0 sm:px-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Document Analysis</h1>
             <p className="text-sm text-gray-600 mt-1">{getDocumentTypeLabel(effectiveType)}</p>
 
             {showBubble && !showRerunConfirm && (
@@ -472,7 +362,7 @@ export default function AnalysisDetails() {
                     {new Date(analysis.created_at).toLocaleString('pl-PL')}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="hidden items-center gap-2 sm:flex">
                   <span className="text-gray-600">Document ID:</span>
                   <button
                     onClick={() => copyToClipboard(analysis.document_id)}
@@ -483,7 +373,7 @@ export default function AnalysisDetails() {
                     <Copy size={14} className="shrink-0" />
                   </button>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="hidden items-center gap-2 sm:flex">
                   <span className="text-gray-600">Analysis ID:</span>
                   <button
                     onClick={() => copyToClipboard(analysis.id)}
@@ -510,7 +400,7 @@ export default function AnalysisDetails() {
               </div>
             )}
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
               variant="destructive"
               size="sm"
@@ -554,8 +444,9 @@ export default function AnalysisDetails() {
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-6 px-6 py-3 flex-1 min-h-0 overflow-y-auto">
-        <div className="w-96 shrink-0 flex flex-col gap-6 min-h-0 overflow-hidden">
+      <div className="flex flex-col gap-6 py-3 sm:px-6 lg:flex-row">
+        {/* Left Panel - sticks while the document scrolls (desktop) */}
+        <div className="order-2 flex shrink-0 flex-col gap-6 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-12rem)] lg:w-96 lg:self-start lg:overflow-y-auto">
           <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-80">
             <CardContent className="p-6 flex flex-col max-h-80">
               <h2 className="mb-4 font-semibold text-gray-900">Formal Issues</h2>
@@ -579,108 +470,26 @@ export default function AnalysisDetails() {
               )}
 
               {formalIssues.length > 0 && (
-                <div className="space-y-3 overflow-y-auto pr-1">
-                  {formalIssues.map((issue: ValidationIssue, idx: number) => {
-                    const config = severityConfig[issue.severity] ?? severityConfig.low;
-
-                    return (
-                      <div
-                        key={`${issue.rule_name}-${idx}`}
-                        className={`border-l-4 ${config.border} ${config.bg} rounded p-3`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-medium ${config.text}`}>{issue.message}</p>
-                            <p className="mt-1 text-xs text-gray-600">{issue.rule_name}</p>
-                          </div>
-                          <span
-                            className={`${config.badge} whitespace-nowrap rounded px-2 py-1 text-xs font-medium`}
-                          >
-                            {issue.severity}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <div className="overflow-y-auto p-0.5">{formalIssueList}</div>
               )}
             </CardContent>
           </Card>
 
-          {/* Issues Found Card */}
-          <Card className="border border-gray-200 bg-white shadow-none flex-1 flex flex-col min-h-0">
-            <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+          {/* Issues Found Card - on mobile the list lives in a bottom sheet */}
+          <Card className="hidden shrink-0 flex-col border border-gray-200 bg-white shadow-none lg:flex">
+            <CardContent className="flex flex-col p-6">
               <div className="mb-4 flex items-center gap-3">
                 <h2 className="font-semibold text-gray-900">Issues Found</h2>
                 <AiBadge />
               </div>
-
-              <Input
-                placeholder="Search alert"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-4 border-gray-300"
-              />
-
-              {/* Filter Tabs */}
-              <div className="flex gap-2 mb-6 flex-wrap">
-                {availableSeverities.map((severity) => (
-                  <button
-                    key={severity}
-                    onClick={() => setFilterSeverity(severity)}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition ${filterSeverity === severity
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                  >
-                    {severity.charAt(0).toUpperCase() + severity.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {filteredErrors.map((error: any, filteredIdx) => {
-                  const originalIdx = enrichedErrors.indexOf(error);
-                  const config = severityConfig[error.severity] ?? severityConfig['low'];
-                  const isHovered = hoveredErrorIndex === originalIdx;
-                  const isSelected = selectedErrorIndex === originalIdx;
-                  return (
-                    <div
-                      key={filteredIdx}
-                      onMouseEnter={() => setHoveredErrorIndex(originalIdx)}
-                      onMouseLeave={() => setHoveredErrorIndex(null)}
-                      onClick={() => setSelectedErrorIndex(isSelected ? null : originalIdx)}
-                      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded transition cursor-pointer ${isSelected
-                        ? 'ring-2 ring-gray-900 bg-opacity-80'
-                        : isHovered
-                          ? 'bg-opacity-80'
-                          : ''
-                        }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium ${config.text} text-sm`}>{error.issue}</p>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {error.text_reference}
-                          </p>
-                        </div>
-                        <span
-                          className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}
-                        >
-                          {error.severity}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {issueFilters}
+              <div className="max-h-[55dvh] overflow-y-auto p-0.5">{issueList}</div>
             </CardContent>
           </Card>
 
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
-            <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
+            <Card className="border border-gray-200 shrink-0">
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 <div className="mb-4 flex items-center gap-3">
                   <h3 className="font-semibold text-gray-900">Applicable Laws</h3>
@@ -709,12 +518,12 @@ export default function AnalysisDetails() {
           )}
         </div>
 
-        {/* Right Panel - Document Preview & Summary */}
-        <div className="flex-1 flex flex-col gap-6 min-h-0 overflow-hidden">
+        {/* Right Panel - Summary & Document Preview */}
+        <div className="order-1 flex min-w-0 flex-1 flex-col gap-6 lg:order-2">
           {/* Summary */}
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.summary as string) && (
-            <Card className="border border-gray-200 bg-gray-50 shrink-0 max-h-32 overflow-y-auto">
+            <Card className="border border-gray-200 bg-gray-50 shrink-0 max-h-40 overflow-y-auto">
               <CardContent className="p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <h2 className="font-semibold text-gray-900">Summary</h2>
@@ -730,84 +539,87 @@ export default function AnalysisDetails() {
 
           {/* Document Preview with Highlights */}
           {analysis?.document_id && (
-            <Card className="border border-gray-200 flex-1 flex flex-col min-h-0">
-              <CardContent className="p-6 flex flex-col flex-1 min-h-0">
-                <h3 className="font-semibold text-gray-900 mb-3">Document Preview</h3>
-                {imageError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded mb-4 text-sm">
-                    Error loading document: {imageError}
-                  </div>
-                )}
-
-                {totalPages > 1 && (
-                  <div className="mb-4 flex items-center gap-3">
-                    <button
-                      onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-                      disabled={currentPage === 0}
-                      className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 rounded text-sm"
-                    >
-                      ← Previous
-                    </button>
-                    <span className="text-sm text-gray-600 min-w-max">
-                      Page {currentPage + 1} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-                      disabled={currentPage === totalPages - 1}
-                      className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:text-gray-400 rounded text-sm"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                )}
-
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 overflow-auto flex-1 min-h-0 relative">
-                  {isLoadingImage && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 rounded z-10">
-                      <div className="text-center">
-                        <div className="inline-block">
-                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
-                        </div>
-                        <p className="mt-3 text-sm text-gray-700 font-medium">
-                          Loading document...
-                        </p>
+            <Card className="border border-gray-200 shadow-none">
+              <CardContent className="p-3 sm:p-6">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-semibold text-gray-900">Document Preview</h3>
+                  <div className="flex items-center gap-2">
+                    {variants.length > 1 && (
+                      <div
+                        role="radiogroup"
+                        aria-label="Document version"
+                        className="inline-flex rounded-md bg-gray-100 p-0.5"
+                      >
+                        {(['redacted', 'original'] as const).map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            role="radio"
+                            aria-checked={variant === option}
+                            onClick={() => setRequestedVariant(option)}
+                            className={`rounded px-3 py-1 text-xs font-medium transition ${variant === option
+                              ? 'bg-white text-gray-900 shadow-sm'
+                              : 'text-gray-600 hover:text-gray-900'
+                              }`}
+                          >
+                            {option === 'redacted' ? 'Redacted' : 'Original'}
+                          </button>
+                        ))}
                       </div>
-                    </div>
-                  )}
-                  {documentMimeType === 'application/pdf' && documentBlobUrl ? (
-                    <iframe
-                      src={documentBlobUrl}
-                      className="w-full h-full border border-gray-300 rounded"
-                      title="Document Preview"
+                    )}
+                    <a
+                      href={getDocumentDownloadUrl(analysis.document_id)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      <Download size={14} />
+                      <span className="hidden sm:inline">Download original</span>
+                    </a>
+                  </div>
+                </div>
+
+                {pagesError && (
+                  <div className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    Error loading document: {pagesError.message}
+                  </div>
+                )}
+
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-2 sm:p-4">
+                  {pagesManifest ? (
+                    <DocumentViewer
+                      analysisId={analysis.id}
+                      pages={pagesManifest.pages}
+                      variant={variant}
+                      issues={viewerIssues}
+                      hoveredIndex={hoveredErrorIndex}
+                      selectedIndex={selectedErrorIndex}
+                      canHover={canHover}
+                      reducedMotion={reducedMotion}
+                      popoverContent={isDesktop ? selectedIssueDetails : null}
+                      onHover={setHoveredErrorIndex}
+                      onSelect={setSelectedErrorIndex}
                     />
-                  ) : documentMimeType === 'image/jpeg' || documentMimeType === 'image/png' ? (
-                    documentBlobUrl && (
-                      <img
-                        src={documentBlobUrl}
-                        alt="Document"
-                        className="mx-auto border border-gray-300 rounded"
-                        style={{ maxWidth: '100%', height: 'auto' }}
-                      />
-                    )
                   ) : (
-                    <canvas
-                      ref={canvasRef}
-                      className="mx-auto border border-gray-300 rounded"
-                      style={{ maxWidth: '100%', height: 'auto' }}
-                    />
+                    !pagesError && (
+                      <div className="flex aspect-[1/1.414] w-full items-center justify-center">
+                        <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-gray-900" />
+                      </div>
+                    )
                   )}
                 </div>
-                <div className="mt-3 flex gap-2">
+
+                <div className="mt-3 flex flex-wrap gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-100 border-2 border-red-600"></div>
+                    <div className="h-4 w-4 border-2 border-red-600 bg-red-100"></div>
                     <span className="text-xs text-gray-600">Critical</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-orange-100 border-2 border-orange-600"></div>
+                    <div className="h-4 w-4 border-2 border-orange-600 bg-orange-100"></div>
                     <span className="text-xs text-gray-600">High</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-100 border-2 border-yellow-600"></div>
+                    <div className="h-4 w-4 border-2 border-yellow-600 bg-yellow-100"></div>
                     <span className="text-xs text-gray-600">Medium</span>
                   </div>
                 </div>
@@ -816,6 +628,60 @@ export default function AnalysisDetails() {
           )}
         </div>
       </div>
+
+      {/* Mobile: issues sheet and the card of the selected issue */}
+      {!isDesktop && viewerIssues.length > 0 && (
+        <>
+          {selectedIssueDetails ? (
+            <div
+              role="dialog"
+              aria-label="Selected issue"
+              className="fixed inset-x-0 bottom-0 z-40 m-3 rounded-lg border border-gray-200 bg-white p-4 shadow-lg pb-[max(1rem,env(safe-area-inset-bottom))]"
+            >
+              {selectedIssueDetails}
+              <button
+                type="button"
+                onClick={() => setIsIssueSheetOpen(true)}
+                className="mt-2 w-full rounded-md border border-gray-200 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              >
+                All issues
+              </button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setIsIssueSheetOpen(true)}
+              className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 gap-2 rounded-full shadow-lg"
+            >
+              <ListChecks size={16} />
+              Issues ({viewerIssues.length})
+            </Button>
+          )}
+
+          <Sheet open={isIssueSheetOpen} onOpenChange={setIsIssueSheetOpen}>
+            <SheetContent side="bottom" className="flex max-h-[80dvh] flex-col gap-0 rounded-t-xl bg-white">
+              <SheetHeader className="pb-2">
+                <SheetTitle className="flex items-center gap-3">
+                  Issues Found <AiBadge />
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Select an issue to highlight it on the document.
+                </SheetDescription>
+              </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
+                {formalIssues.length > 0 && (
+                  <>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-900">Formal Issues</h3>
+                    <div className="mb-6">{formalIssueList}</div>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Issues</h3>
+                  </>
+                )}
+                {issueFilters}
+                {issueList}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
     </div>
   );
 }
