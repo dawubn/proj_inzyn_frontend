@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,6 @@ import type {
 } from '@/api/generated/model';
 import { useGetReportApiV1ReportsAnalysisIdGet } from '@/api/generated/reports/reports';
 import {
-  deleteRedactionApiV1RedactionsAnalysisIdDelete,
   useGetRedactionApiV1RedactionsAnalysisIdGet,
 } from '@/api/generated/redactions/redactions';
 import {
@@ -30,6 +29,10 @@ import { IssueDetails } from '@/features/document-viewer/IssueDetails';
 import { IssueList } from '@/features/document-viewer/IssueList';
 import type { LegalIssue } from '@/features/document-viewer/types';
 import { aiToViewerIssue, formalToViewerIssue } from '@/features/document-viewer/toViewerIssue';
+import {
+  DeleteAnalysisDialog,
+  type AnalysisToDelete,
+} from '@/features/analysis/DeleteAnalysisDialog';
 import {
   useMediaQuery,
   DESKTOP_QUERY,
@@ -49,10 +52,9 @@ function AiBadge() {
 export default function AnalysisDetails() {
   const { analysisId } = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const [analysisToDelete, setAnalysisToDelete] = useState<AnalysisToDelete | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDeleting, setIsDeleting] = useState(false);
   const [hoveredErrorIndex, setHoveredErrorIndex] = useState<number | null>(null);
   const [selectedErrorIndex, setSelectedErrorIndex] = useState<number | null>(null);
   const [showRerunConfirm, setShowRerunConfirm] = useState(false);
@@ -405,27 +407,13 @@ export default function AnalysisDetails() {
               variant="destructive"
               size="sm"
               className="gap-2"
-              disabled={isDeleting}
-              onClick={async () => {
+              onClick={() => {
                 if (!analysisId) return;
-                if (!confirm('Are you sure you want to delete this analysis?')) return;
-
-                try {
-                  setIsDeleting(true);
-                  await deleteRedactionApiV1RedactionsAnalysisIdDelete(analysisId, {
-                    credentials: 'include',
-                  });
-                  await queryClient.invalidateQueries({ queryKey: ['recentAnalysis'] });
-                  navigate('/dashboard');
-                } catch (error) {
-                  console.error('Delete error:', error);
-                  alert('Failed to delete analysis');
-                  setIsDeleting(false);
-                }
+                setAnalysisToDelete({ id: analysisId, name: `Analysis ${analysisId.slice(0, 8)}` });
               }}
             >
               <Trash2 size={16} />
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              Delete
             </Button>
             <Button
               variant="outline"
@@ -682,6 +670,11 @@ export default function AnalysisDetails() {
           </Sheet>
         </>
       )}
+      <DeleteAnalysisDialog
+        analysis={analysisToDelete}
+        onClose={() => setAnalysisToDelete(null)}
+        onDeleted={() => navigate('/dashboard')}
+      />
     </div>
   );
 }

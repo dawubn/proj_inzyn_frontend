@@ -6,12 +6,18 @@ import { useMe } from '@/hooks/auth/useMe';
 import { getStatusConfig } from '@/api/documents-wrapper';
 import { formatDate } from '@/lib/formatters';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
+import { X } from 'lucide-react';
+import {
+  DeleteAnalysisDialog,
+  type AnalysisToDelete,
+} from '@/features/analysis/DeleteAnalysisDialog';
 
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [analysisToDelete, setAnalysisToDelete] = useState<AnalysisToDelete | null>(null);
   const { data: user } = useMe();
   const [isLastAnalysisRefreshing, setIsLastAnalysisRefreshing] = useState(false);
 
@@ -166,6 +172,18 @@ export default function Dashboard() {
                               ) : null}
                             </div>
                           )}
+                          <button
+                            type="button"
+                            aria-label={`Delete ${title}`}
+                            title="Delete analysis"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAnalysisToDelete({ id: analysis.id, name: title });
+                            }}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#9CA3AF] transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-600"
+                          >
+                            <X size={16} />
+                          </button>
                         </div>
                       </div>
                     );
@@ -218,6 +236,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <DeleteAnalysisDialog analysis={analysisToDelete} onClose={() => setAnalysisToDelete(null)} />
     </div>
   );
 }
