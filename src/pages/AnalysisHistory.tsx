@@ -6,9 +6,15 @@ import { getStatusConfig, getDocumentTypeLabel, fetchDocuments } from '@/api/doc
 import { formatDate } from '@/lib/formatters';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 import type { DocumentResponse } from '@/api/generated/model';
+import { X } from 'lucide-react';
+import {
+  DeleteAnalysisDialog,
+  type AnalysisToDelete,
+} from '@/features/analysis/DeleteAnalysisDialog';
 
 export default function AnalysisHistory() {
   const navigate = useNavigate();
+  const [analysisToDelete, setAnalysisToDelete] = useState<AnalysisToDelete | null>(null);
   const [search, setSearch] = useState('');
   const [isHardRefreshing, setIsHardRefreshing] = useState(false);
 
@@ -230,7 +236,7 @@ export default function AnalysisHistory() {
 
                           <div className="w-40">{renderStatusBadge(cfg.label)}</div>
 
-                          <div className="w-28 flex justify-end">
+                          <div className="w-28 flex items-center justify-end gap-1">
                             <Button
                               size="sm"
                               className="h-9 min-h-[36px] px-4 rounded-lg bg-[#171717] text-xs sm:text-sm font-medium text-white hover:bg-[#2A2A2A]"
@@ -238,6 +244,15 @@ export default function AnalysisHistory() {
                             >
                               View
                             </Button>
+                            <button
+                              type="button"
+                              aria-label={`Delete ${title}`}
+                              title="Delete analysis"
+                              onClick={() => setAnalysisToDelete({ id: analysis.id, name: title })}
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#9CA3AF] transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-600"
+                            >
+                              <X size={18} />
+                            </button>
                           </div>
                         </div>
                       );
@@ -249,6 +264,7 @@ export default function AnalysisHistory() {
           </div>
         </div>
       </div>
+      <DeleteAnalysisDialog analysis={analysisToDelete} onClose={() => setAnalysisToDelete(null)} />
     </div>
   );
 }

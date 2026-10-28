@@ -1,6 +1,6 @@
 import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
 import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
+import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet, deleteRedactionApiV1RedactionsAnalysisIdDelete } from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -361,4 +361,14 @@ export function getPageImageUrl(
 export function getDocumentDownloadUrl(documentId: string): string {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   return `${apiUrl}/api/v1/documents/${documentId}/download`;
+}
+
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const response = await deleteRedactionApiV1RedactionsAnalysisIdDelete(analysisId, {
+    credentials: 'include',
+  });
+
+  if (response.status !== 204) {
+    throw new Error('Failed to delete analysis');
+  }
 }

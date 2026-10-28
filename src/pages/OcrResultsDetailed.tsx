@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { FileText } from 'lucide-react';
 import { useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 import type { DocumentAnalysisResponse } from '@/api/generated/model';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 
 export default function OcrResultsDetailed() {
   const { analysisId } = useParams<{ analysisId: string }>();
-  const navigate = useNavigate();
 
   const { data: analysisData, isLoading } = useGetRedactionApiV1RedactionsAnalysisIdGet(
     analysisId || '',
@@ -121,17 +120,7 @@ export default function OcrResultsDetailed() {
   return (
     <div className="h-full bg-white flex flex-col overflow-hidden">
       <div className="border-b border-gray-200 px-6 py-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/analysis/${analysisId}`)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
-            >
-              <ArrowLeft size={20} className="text-gray-600" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">Extracted Text</h1>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Extracted Text</h1>
       </div>
 
       <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0 bg-gray-50">
