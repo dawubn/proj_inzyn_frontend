@@ -1,6 +1,6 @@
 import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
 import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
+import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet, deleteRedactionApiV1RedactionsAnalysisIdDelete } from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -320,4 +320,55 @@ export async function getAnalysisStatus(analysisId: string): Promise<DocumentAna
   }
 
   return response.data as DocumentAnalysisResponse;
+}
+
+export type PreviewVariant = 'original' | 'redacted';
+
+export interface PageInfo {
+  page: number;
+  width: number;
+  height: number;
+}
+
+export interface PagesManifest {
+  variants: PreviewVariant[];
+  pages: PageInfo[];
+}
+
+export async function fetchPagesManifest(analysisId: string): Promise<PagesManifest> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/${analysisId}/pages`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch document pages');
+  }
+
+  return response.json() as Promise<PagesManifest>;
+}
+
+export function getPageImageUrl(
+  analysisId: string,
+  page: number,
+  variant: PreviewVariant,
+  size: 'sm' | 'lg',
+): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/redactions/${analysisId}/pages/${page}/image?variant=${variant}&size=${size}`;
+}
+
+export function getDocumentDownloadUrl(documentId: string): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/documents/${documentId}/download`;
+}
+
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const response = await deleteRedactionApiV1RedactionsAnalysisIdDelete(analysisId, {
+    credentials: 'include',
+  });
+
+  if (response.status !== 204) {
+    throw new Error('Failed to delete analysis');
+  }
 }
