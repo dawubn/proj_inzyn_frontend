@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { uploadDocument, startDocumentAnalysis } from '@/api/documents-wrapper';
+import { uploadDocument, startDocumentAnalysis, patchDocumentType } from '@/api/documents-wrapper';
 
 export function useDocumentAnalysis() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const mutation = useMutation({
-    mutationFn: async (files: File[]) => {
+    mutationFn: async ({ files, documentType }: { files: File[]; documentType: string }) => {
       const progressInterval = window.setInterval(() => {
         setProgress((current) => (current >= 85 ? current : current + 5));
       }, 300);
@@ -17,6 +17,10 @@ export function useDocumentAnalysis() {
       try {
         for (const file of files) {
           const uploadedDocument = await uploadDocument(file);
+          // Persist the selected profile before Celery can start reading the document.
+          if (documentType !== 'auto') {
+            await patchDocumentType(uploadedDocument.id, documentType);
+          }
           const result = await startDocumentAnalysis(uploadedDocument.id);
           window.clearInterval(progressInterval);
           return result; // Return analysis_id

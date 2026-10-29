@@ -9,7 +9,6 @@ import type {
   AnalysisReportResponse,
   DocumentAnalysisResponse,
   DocumentResponse,
-  ValidationIssue,
 } from '@/api/generated/model';
 import { useGetReportApiV1ReportsAnalysisIdGet } from '@/api/generated/reports/reports';
 import {
@@ -23,52 +22,9 @@ import {
   triggerLegalAnalysis,
 } from '@/api/documents-wrapper';
 import 'tiff.js';
+import { FormalValidationCard } from '@/components/analysis/FormalValidationCard';
+import { severityConfig } from '@/components/analysis/issueStyles';
 
-const severityConfig: Record<string, { bg: string; border: string; text: string; badge: string }> =
-{
-  critical: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    text: 'text-red-700',
-    badge: 'bg-red-100 text-red-800',
-  },
-  error: {
-    bg: 'bg-red-50',
-    border: 'border-red-300',
-    text: 'text-red-700',
-    badge: 'bg-red-100 text-red-800',
-  },
-  high: {
-    bg: 'bg-orange-50',
-    border: 'border-orange-300',
-    text: 'text-orange-700',
-    badge: 'bg-orange-100 text-orange-800',
-  },
-  warning: {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-300',
-    text: 'text-yellow-700',
-    badge: 'bg-yellow-100 text-yellow-800',
-  },
-  medium: {
-    bg: 'bg-yellow-50',
-    border: 'border-yellow-300',
-    text: 'text-yellow-700',
-    badge: 'bg-yellow-100 text-yellow-800',
-  },
-  info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-300',
-    text: 'text-blue-700',
-    badge: 'bg-blue-100 text-blue-800',
-  },
-  low: {
-    bg: 'bg-gray-50',
-    border: 'border-gray-300',
-    text: 'text-gray-700',
-    badge: 'bg-gray-100 text-gray-800',
-  },
-};
 
 function AiBadge() {
   return (
@@ -128,10 +84,6 @@ export default function AnalysisDetails() {
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
   const formalReport =
     reportData?.status === 200 ? (reportData.data as AnalysisReportResponse) : undefined;
-  const formalIssues = useMemo(
-    () => [...(formalReport?.errors || []), ...(formalReport?.warnings || [])],
-    [formalReport],
-  );
 
   const [docInfo, setDocInfo] = useState<DocumentResponse | null>(null);
 
@@ -556,56 +508,7 @@ export default function AnalysisDetails() {
       {/* Main Content */}
       <div className="flex gap-6 px-6 py-3 flex-1 min-h-0 overflow-y-auto">
         <div className="w-96 shrink-0 flex flex-col gap-6 min-h-0 overflow-hidden">
-          <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-80">
-            <CardContent className="p-6 flex flex-col max-h-80">
-              <h2 className="mb-4 font-semibold text-gray-900">Formal Issues</h2>
-
-              {isReportLoading && (
-                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-                  Loading formal issues...
-                </div>
-              )}
-
-              {!isReportLoading && !formalReport && (
-                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-                  Formal issues are not available yet.
-                </div>
-              )}
-
-              {!isReportLoading && formalReport && formalIssues.length === 0 && (
-                <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                  No formal issues detected.
-                </div>
-              )}
-
-              {formalIssues.length > 0 && (
-                <div className="space-y-3 overflow-y-auto pr-1">
-                  {formalIssues.map((issue: ValidationIssue, idx: number) => {
-                    const config = severityConfig[issue.severity] ?? severityConfig.low;
-
-                    return (
-                      <div
-                        key={`${issue.rule_name}-${idx}`}
-                        className={`border-l-4 ${config.border} ${config.bg} rounded p-3`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-sm font-medium ${config.text}`}>{issue.message}</p>
-                            <p className="mt-1 text-xs text-gray-600">{issue.rule_name}</p>
-                          </div>
-                          <span
-                            className={`${config.badge} whitespace-nowrap rounded px-2 py-1 text-xs font-medium`}
-                          >
-                            {issue.severity}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <FormalValidationCard report={formalReport} isLoading={isReportLoading} />
 
           {/* Issues Found Card */}
           <Card className="border border-gray-200 bg-white shadow-none flex-1 flex flex-col min-h-0">

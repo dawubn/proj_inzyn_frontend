@@ -59,7 +59,8 @@ export default function DocumentAnalysis() {
   } = useInfiniteQuery({
     queryKey: ['user-documents'],
     queryFn: ({ pageParam = 1 }) => fetchDocuments(pageParam, 20),
-    getNextPageParam: (lastPage) => (lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined),
+    getNextPageParam: (lastPage) =>
+      lastPage.page < lastPage.pages ? lastPage.page + 1 : undefined,
     initialPageParam: 1,
   });
 
@@ -72,7 +73,7 @@ export default function DocumentAnalysis() {
           fetchNextPage();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     const currentRef = lastDocumentRef.current;
@@ -113,19 +114,9 @@ export default function DocumentAnalysis() {
 
   useEffect(() => {
     if (analysisStatus?.status === 'completed' && currentAnalysisId) {
-      const doNavigate = async () => {
-        if (documentTypeChoice !== 'auto' && analysisStatus.document_id) {
-          try {
-            await patchDocumentType(analysisStatus.document_id, documentTypeChoice);
-          } catch {
-            // best-effort
-          }
-        }
-        navigate(`/analysis/${currentAnalysisId}`);
-      };
-      doNavigate();
+      navigate(`/analysis/${currentAnalysisId}`);
     }
-  }, [analysisStatus?.status, currentAnalysisId, navigate, documentTypeChoice, analysisStatus?.document_id]);
+  }, [analysisStatus?.status, currentAnalysisId, navigate]);
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
@@ -133,7 +124,11 @@ export default function DocumentAnalysis() {
       return;
     }
 
-    startAnalysis(selectedFiles);
+    setErrorMessage('');
+    startAnalysis(
+      { files: selectedFiles, documentType: documentTypeChoice },
+      { onError: (error) => setErrorMessage(error.message || 'Failed to start analysis') },
+    );
   }
 
   async function handleTriggerLegalAnalysis() {
@@ -144,6 +139,11 @@ export default function DocumentAnalysis() {
 
     try {
       setAnalysisError('');
+      setIsAnalyzing(true);
+      await patchDocumentType(
+        selectedDocId,
+        documentTypeChoice === 'auto' ? 'unknown' : documentTypeChoice,
+      );
       const result = await triggerLegalAnalysis(selectedDocId);
       handleSetAnalysisId(result.analysis_id);
     } catch (error) {
@@ -152,7 +152,10 @@ export default function DocumentAnalysis() {
     }
   }
 
-  if (analysisStatus && (analysisStatus.status.includes('failed') || analysisStatus.error_message)) {
+  if (
+    analysisStatus &&
+    (analysisStatus.status.includes('failed') || analysisStatus.error_message)
+  ) {
     return (
       <div className="flex w-full items-start justify-center px-3 pt-16 pb-6 sm:items-center sm:px-4 sm:pt-16 sm:pb-10">
         <div className="w-full max-w-2xl">
@@ -161,8 +164,12 @@ export default function DocumentAnalysis() {
               <h1 className="text-2xl font-bold text-red-900 sm:text-3xl">Analysis Failed</h1>
 
               <div className="mt-6 rounded-xl border border-red-300 bg-white p-6">
-                <p className="text-red-700 text-sm mb-2"><strong>Stage:</strong> {analysisStatus.processing_stage}</p>
-                <p className="text-red-700">{analysisStatus.error_message || 'Unknown error occurred'}</p>
+                <p className="text-red-700 text-sm mb-2">
+                  <strong>Stage:</strong> {analysisStatus.processing_stage}
+                </p>
+                <p className="text-red-700">
+                  {analysisStatus.error_message || 'Unknown error occurred'}
+                </p>
               </div>
 
               <Button
@@ -220,7 +227,9 @@ export default function DocumentAnalysis() {
             {detectedType && detectedType !== 'unknown' && (
               <div className="mt-3 rounded-lg bg-gray-50 px-4 py-2 text-sm">
                 <span className="text-gray-500">Detected type: </span>
-                <span className="font-semibold text-gray-900">{getDocumentTypeLabel(detectedType)}</span>
+                <span className="font-semibold text-gray-900">
+                  {getDocumentTypeLabel(detectedType)}
+                </span>
                 {confidence != null && (
                   <span className="ml-1 text-gray-400">({Math.round(confidence * 100)}%)</span>
                 )}
@@ -239,7 +248,7 @@ export default function DocumentAnalysis() {
   }
 
   const documentTypeOptions = Object.entries(DOCUMENT_TYPE_LABELS).filter(
-    ([key]) => key !== 'unknown' && key !== 'other'
+    ([key]) => key !== 'unknown' && key !== 'other',
   );
 
   return (
@@ -252,9 +261,7 @@ export default function DocumentAnalysis() {
 
           {/* Document type selection */}
           <div className="mx-auto mt-6 w-full max-w-sm sm:mt-8">
-            <label className="block text-sm font-semibold text-[#111111] mb-2">
-              Document Type
-            </label>
+            <label className="block text-sm font-semibold text-[#111111] mb-2">Document Type</label>
             <Select value={documentTypeChoice} onValueChange={setDocumentTypeChoice}>
               <SelectTrigger className="w-full border border-[#333] bg-white text-[#111111]">
                 <SelectValue />
@@ -276,7 +283,12 @@ export default function DocumentAnalysis() {
             className="mx-auto mt-5 flex w-full max-w-sm flex-col items-center rounded-xl border border-dashed border-black bg-white px-6 py-6 text-center sm:mt-8 sm:px-10 sm:py-10 lg:mt-10"
           >
             <svg className="mb-3 h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             <p className="text-sm font-semibold text-[#111111] sm:text-base">
               Click to browse or drag files here
@@ -359,18 +371,14 @@ export default function DocumentAnalysis() {
               </label>
               <Select value={selectedDocId} onValueChange={setSelectedDocId}>
                 <SelectTrigger className="w-full border border-[#333] bg-white text-[#111111]">
-                  <SelectValue placeholder={docsLoading ? 'Loading documents...' : 'Choose a document'} />
+                  <SelectValue
+                    placeholder={docsLoading ? 'Loading documents...' : 'Choose a document'}
+                  />
                 </SelectTrigger>
                 <SelectContent className="bg-white max-h-72 overflow-y-auto">
                   {documents.map((doc, index) => (
-                    <div
-                      key={doc.id}
-                      ref={index === documents.length - 1 ? lastDocumentRef : null}
-                    >
-                      <SelectItem
-                        value={doc.id}
-                        className="hover:bg-gray-100 cursor-pointer"
-                      >
+                    <div key={doc.id} ref={index === documents.length - 1 ? lastDocumentRef : null}>
+                      <SelectItem value={doc.id} className="hover:bg-gray-100 cursor-pointer">
                         {doc.original_filename}
                       </SelectItem>
                     </div>
