@@ -58,7 +58,7 @@ jobs:
     steps:
       - name: Trigger Coolify deployment
         run: |
-          curl --fail --show-error --silent \
+          curl --fail-with-body --show-error --silent \
             --request POST \
             --header "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}" \
-            "${{ secrets.COOLIFY_FRONTEND_WEBHOOK }}"
+            "https://coolify-hooks.unitasnet.com/api/v1/deploy?uuid=fsw5bpq7b68fjqip640k72a3&force=false"
