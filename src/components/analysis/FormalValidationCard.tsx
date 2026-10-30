@@ -1,14 +1,15 @@
+import { useEffect, useRef } from 'react';
 import type { AnalysisReportResponse, ValidationIssue } from '@/api/generated/model';
 import { Card, CardContent } from '@/components/ui/card';
-import { severityConfig } from './issueStyles';
+import { severityConfig } from '@/features/document-viewer/severity';
+import { displayLabel, displayMessage, outcomeLabels, type FormalOutcome } from './formalMessages';
 
 type Evidence = { text: string; page?: number | null };
-type Outcome = 'pass' | 'fail' | 'unknown' | 'not_applicable' | 'error';
 type Check = {
   rule_id: string;
   rule_name: string;
   field_name?: string | null;
-  outcome: Outcome;
+  outcome: FormalOutcome;
   severity: string;
   reason_code?: string;
   evidence: Evidence[];
@@ -19,104 +20,35 @@ type Summary = {
   rule_results?: Check[];
 };
 
-const outcomeLabels: Record<Outcome, string> = {
-  pass: 'Passed',
-  fail: 'Needs attention',
-  unknown: 'Review',
-  not_applicable: 'Not required',
-  error: 'Unavailable',
-};
 const statusLabels: Record<string, string> = {
   complete: 'All required checks passed. Review any additional notes below.',
   incomplete: 'Some information needs your attention.',
   indeterminate: 'Some items need a manual review.',
   unsupported: 'Checks are not yet available for this document type.',
 };
-// Interface labels stay in English; document findings are written in Polish.
-const fieldLabels: Record<string, string> = {
-  has_date: 'Data dokumentu',
-  has_principal_section: 'Mocodawca',
-  has_attorney_section: 'Pełnomocnik',
-  has_authorization_scope_section: 'Zakres umocowania',
-  has_parties_section: 'Oznaczenie stron',
-  has_subject_section: 'Przedmiot umowy',
-  has_court_section: 'Oznaczenie sądu',
-  has_claim_section: 'Żądanie pozwu',
-  has_justification_section: 'Uzasadnienie',
-  has_signature: 'Podpis',
-  has_attachments_section: 'Załączniki',
-  has_text: 'Treść dokumentu',
-  document_type: 'Rodzaj dokumentu',
-};
-const reasonMessages: Record<string, string> = {
-  MASK_TYPE_MISMATCH:
-    'Ukryta wartość dotyczy innego rodzaju danych. Sprawdź, czy to pole jest wypełnione.',
-  UNRECOGNIZED_NUMBER: 'Nie udało się odczytać kwoty. Sprawdź ją w dokumencie.',
-  UNRECOGNIZED_IDENTIFIER: 'Nie udało się odczytać oznaczenia lub numeru. Sprawdź go w dokumencie.',
-  FIELD_LAYOUT_UNCERTAIN:
-    'Nie można pewnie przypisać treści do tego pola. Sprawdź je w dokumencie.',
-  VARIANT_FIELD_REVIEW:
-    'Sprawdź, czy ten element występuje i jest potrzebny w tym rodzaju dokumentu.',
-  VISUAL_REVIEW_REQUIRED: 'Sprawdź zdjęcie i zabezpieczenia na oryginale dokumentu.',
-  TABLE_CONTENT_UNVERIFIED: 'Sprawdź, czy tabela zawiera wypełnione pozycje, a nie tylko nagłówki.',
-  EMPTY_FIELD: 'To pole jest puste. Uzupełnij je w dokumencie.',
-  INVALID_DATE: 'Ta data jest niepoprawna. Sprawdź dzień, miesiąc i rok.',
-  REDACTED_PRESENCE_CONFIRMED:
-    'Pole jest wypełnione. Jego treść została ukryta dla ochrony danych.',
-  MASKED_CONTENT_UNVERIFIABLE:
-    'Pole jest wypełnione, ale jego treść jest ukryta. Sprawdź poprawność w oryginale.',
-  REDACTED_VALUE: 'Treść tego pola jest ukryta. Sprawdź ją w oryginale dokumentu.',
-  REDACTED_DATE: 'Data jest ukryta. Jej poprawność możesz sprawdzić w oryginale dokumentu.',
-  REDACTED_PARTY: 'Dane osoby są ukryte. Sprawdź je w oryginale dokumentu.',
-  PARTY_FIELD_EMPTY: 'Dane co najmniej jednej ze stron są puste. Uzupełnij je w dokumencie.',
-  PARTY_NOT_FOUND: 'Nie znaleziono danych obu stron. Sprawdź, czy dokument je zawiera.',
-  PARTIES_UNCERTAIN: 'Sprawdź, czy dokument zawiera dane obu stron.',
-  SIGNATURE_REQUIRES_VISUAL_REVIEW:
-    'Sprawdź na oryginale dokumentu, czy znajduje się wymagany podpis.',
-  LOW_OCR_CONFIDENCE: 'Ten fragment jest trudny do odczytania. Sprawdź go w oryginale dokumentu.',
-  CONFLICTING_CANDIDATES:
-    'Znaleziono różne informacje dotyczące tego pola. Sprawdź, która jest właściwa.',
-  CONFLICTING_DATES: 'Znaleziono różne daty. Sprawdź, która jest datą dokumentu.',
-  UNRECOGNIZED_DATE: 'Nie udało się odczytać daty. Sprawdź ją w dokumencie.',
-  INSUFFICIENT_VALUE: 'Sprawdź, czy to pole zawiera wszystkie potrzebne informacje.',
-  SCOPE_NOT_ESTABLISHED: 'Sprawdź, czy opisano, do jakich czynności upoważniono pełnomocnika.',
-  LAYOUT_UNAVAILABLE:
-    'Nie udało się dokładnie odczytać układu dokumentu. Sprawdź ten element ręcznie.',
-  UNREADABLE_PAGE:
-    'Nie udało się odczytać przynajmniej jednej strony. Sprawdź czytelność dokumentu.',
-  INSUFFICIENT_TEXT: 'Odczytano zbyt mało treści. Spróbuj przesłać wyraźniejszą kopię dokumentu.',
-  NO_TEXT: 'Nie udało się odczytać dokumentu. Spróbuj przesłać wyraźniejszą kopię.',
-  AZURE_OCR_REQUIRED: 'Nie udało się odczytać dokumentu. Uruchom analizę ponownie.',
-  LEGACY_EXTRACTION: 'Uruchom analizę ponownie, aby sprawdzić ten element.',
-  ATTACHMENT_CONTENT_UNVERIFIED: 'Sprawdź, czy dołączono wszystkie wymienione załączniki.',
-  UNSUPPORTED_PROFILE: 'Nie sprawdzamy jeszcze tego rodzaju dokumentów.',
-  NO_ATTACHMENT_REQUIREMENT: 'Nie znaleziono informacji o wymaganych załącznikach.',
-  INVALID_RULE_CONFIG: 'Nie udało się sprawdzić tego elementu. Spróbuj ponownie później.',
-  UNKNOWN_RULE_TYPE: 'Nie udało się sprawdzić tego elementu. Spróbuj ponownie później.',
-  VALUE_UNAVAILABLE: 'Nie udało się odczytać wartości tego pola. Sprawdź ją w dokumencie.',
-  PATTERN_MISMATCH: 'Wartość ma nieprawidłowy format. Sprawdź ją w dokumencie.',
-  DATE_OUT_OF_RANGE: 'Data znajduje się poza dozwolonym zakresem. Sprawdź ją w dokumencie.',
-};
-
-function displayMessage(check: Pick<Check, 'outcome' | 'reason_code'>) {
-  if (check.reason_code && reasonMessages[check.reason_code]) {
-    return reasonMessages[check.reason_code];
-  }
-  switch (check.outcome) {
-    case 'pass':
-      return 'Ten element jest obecny i spełnia sprawdzane wymaganie.';
-    case 'not_applicable':
-      return 'Ten element nie jest wymagany w tym sprawdzeniu.';
-    case 'error':
-      return 'Nie udało się sprawdzić tego elementu. Spróbuj ponownie później.';
-    case 'unknown':
-      return 'Sprawdź ten element w oryginale dokumentu.';
-    default:
-      return 'Brakuje wymaganych informacji lub nie spełniają one wymagania. Sprawdź ten element w dokumencie.';
-  }
-}
-
-function CheckResult({ check }: { check: Check }) {
+function CheckResult({
+  check,
+  selected = false,
+  hovered = false,
+  onSelect,
+  onHover,
+  reducedMotion = false,
+}: {
+  check: Check;
+  selected?: boolean;
+  hovered?: boolean;
+  onSelect?: () => void;
+  onHover?: (hovered: boolean) => void;
+  reducedMotion?: boolean;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (selected)
+      buttonRef.current?.scrollIntoView({
+        block: 'nearest',
+        behavior: reducedMotion ? 'auto' : 'smooth',
+      });
+  }, [selected, reducedMotion]);
   const config =
     check.outcome === 'pass'
       ? {
@@ -130,20 +62,36 @@ function CheckResult({ check }: { check: Check }) {
         : check.outcome === 'fail' && check.severity === 'error'
           ? severityConfig.error
           : severityConfig.warning;
-  const label =
-    fieldLabels[check.field_name ?? ''] ??
-    (check.rule_name === 'Formal validation profile' ? 'Rodzaj dokumentu' : check.rule_name);
+  const label = displayLabel(check.rule_name, check.field_name);
   return (
-    <div className={`border-l-4 ${config.border} ${config.bg} p-3 rounded`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className={`font-medium ${config.text} text-sm`}>{label}</p>
+    <div
+      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded ${selected ? 'ring-2 ring-gray-900' : hovered ? 'brightness-95' : ''}`}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        data-issue-item
+        disabled={!onSelect}
+        aria-pressed={onSelect ? selected : undefined}
+        onClick={onSelect}
+        onMouseEnter={onHover ? () => onHover(true) : undefined}
+        onMouseLeave={onHover ? () => onHover(false) : undefined}
+        onFocus={onHover ? () => onHover(true) : undefined}
+        onBlur={onHover ? () => onHover(false) : undefined}
+        className="w-full text-left enabled:cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className={`font-medium ${config.text} text-sm`}>{label}</p>
+          </div>
+          <span
+            className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}
+          >
+            {outcomeLabels[check.outcome] ?? 'Review'}
+          </span>
         </div>
-        <span className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}>
-          {outcomeLabels[check.outcome] ?? 'Review'}
-        </span>
-      </div>
-      <p className="text-xs text-gray-600 mt-1">{displayMessage(check)}</p>
+        <p className="text-xs text-gray-600 mt-1">{displayMessage(check)}</p>
+      </button>
       {check.evidence?.length > 0 && (
         <details className="mt-2 text-xs text-gray-600">
           <summary className="cursor-pointer font-medium hover:text-gray-900">
@@ -185,9 +133,19 @@ function legacyCheck(issue: ValidationIssue, index: number): Check {
 export function FormalValidationCard({
   report,
   isLoading,
+  selectedIssueIndex,
+  hoveredIssueIndex,
+  onSelectIssue,
+  onHoverIssue,
+  reducedMotion,
 }: {
   report?: AnalysisReportResponse;
   isLoading: boolean;
+  selectedIssueIndex?: number | null;
+  hoveredIssueIndex?: number | null;
+  onSelectIssue?: (index: number | null) => void;
+  onHoverIssue?: (index: number | null) => void;
+  reducedMotion?: boolean;
 }) {
   const summary = (report?.summary ?? {}) as Summary;
   const modern = summary.schema_version === 2 && Array.isArray(summary.rule_results);
@@ -195,6 +153,29 @@ export function FormalValidationCard({
   const issues = [...(report?.errors ?? []), ...(report?.warnings ?? [])];
   const actionable = checks.filter((check) => !['pass', 'not_applicable'].includes(check.outcome));
   const remaining = checks.filter((check) => ['pass', 'not_applicable'].includes(check.outcome));
+  const renderCheck = (check: Check, key: string, legacyIndex?: number) => {
+    const issueIndex =
+      legacyIndex ?? issues.findIndex((issue) => issue.details?.rule_id === check.rule_id);
+    return (
+      <CheckResult
+        key={key}
+        check={check}
+        selected={issueIndex >= 0 && selectedIssueIndex === issueIndex}
+        hovered={issueIndex >= 0 && hoveredIssueIndex === issueIndex}
+        onSelect={
+          issueIndex >= 0 && onSelectIssue
+            ? () => onSelectIssue(selectedIssueIndex === issueIndex ? null : issueIndex)
+            : undefined
+        }
+        onHover={
+          issueIndex >= 0 && onHoverIssue
+            ? (hovered) => onHoverIssue(hovered ? issueIndex : null)
+            : undefined
+        }
+        reducedMotion={reducedMotion}
+      />
+    );
+  };
   return (
     <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-[28rem] flex flex-col min-h-0">
       <CardContent className="p-6 flex flex-col min-h-0">
@@ -220,9 +201,7 @@ export function FormalValidationCard({
                   </p>
                 )}
               </div>
-              {actionable.map((check, index) => (
-                <CheckResult key={`${check.rule_id}-${index}`} check={check} />
-              ))}
+              {actionable.map((check, index) => renderCheck(check, `${check.rule_id}-${index}`))}
               {remaining.length > 0 && (
                 <details>
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
@@ -242,9 +221,9 @@ export function FormalValidationCard({
               <p className="text-sm text-gray-600">
                 This is an older report. Run the analysis again to see updated results.
               </p>
-              {issues.map((issue, index) => (
-                <CheckResult key={index} check={legacyCheck(issue, index)} />
-              ))}
+              {issues.map((issue, index) =>
+                renderCheck(legacyCheck(issue, index), `legacy-${index}`, index),
+              )}
             </>
           )}
         </div>

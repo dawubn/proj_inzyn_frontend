@@ -45,3 +45,7 @@ export const severityConfig: Record<
     badge: 'bg-gray-100 text-gray-800',
   },
 };
+
+export function getSeverityConfig(severity: string) {
+  return severityConfig[severity] ?? severityConfig.low;
+}
