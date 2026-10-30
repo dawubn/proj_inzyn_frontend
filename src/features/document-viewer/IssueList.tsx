@@ -1,3 +1,4 @@
+import { outcomeLabels } from '@/components/analysis/formalMessages';
 import { useEffect, useRef } from 'react';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ function issuePage(issue: ViewerIssue) {
 }
 
 function locationTitle(issue: ViewerIssue, hasLocation: boolean) {
+  if (issue.source === 'formal' && issue.outcome !== 'fail') return 'Area to review';
   if (issue.kind === 'placeholder') return 'Field to fill in marked on page';
   if (issue.kind === 'expected') {
     return hasLocation ? 'Expected location marked on page' : 'Missing from page';
@@ -91,7 +93,9 @@ export function IssueList({
                   <span
                     className={`${config.badge} rounded px-2 py-1 text-xs font-medium whitespace-nowrap`}
                   >
-                    {issue.severity}
+                    {issue.source === 'formal' && issue.outcome
+                      ? outcomeLabels[issue.outcome]
+                      : issue.severity}
                   </span>
                   {page != null && (
                     <span

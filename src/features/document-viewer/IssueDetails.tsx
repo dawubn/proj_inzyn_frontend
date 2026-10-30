@@ -1,3 +1,4 @@
+import { outcomeLabels } from '@/components/analysis/formalMessages';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getSeverityConfig } from './severity';
 import type { ViewerIssue } from './types';
@@ -13,11 +14,19 @@ interface IssueDetailsProps {
 
 function locationNote(issue: ViewerIssue): string | null {
   const hasLocation = !!issue.locations?.length;
+  if (issue.source === 'formal' && issue.outcome === 'error') {
+    return 'This check could not be completed.';
+  }
+  if (issue.source === 'formal' && issue.outcome === 'unknown') {
+    return hasLocation
+      ? 'This item needs manual review. The outline marks the area to check.'
+      : 'This item needs manual review in the original document.';
+  }
   if (issue.kind === 'placeholder') return 'This field in the document has not been filled in.';
   if (issue.kind === 'expected') {
     return hasLocation
-      ? 'Missing element. The outline marks where it is usually placed.'
-      : 'Missing element. It is usually found on this page.';
+      ? 'The outline marks where this item is usually placed.'
+      : 'This item is usually found on this page.';
   }
   return hasLocation ? null : 'The referenced text could not be located on the page.';
 }
@@ -40,7 +49,9 @@ export function IssueDetails({
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className={`${config.badge} rounded px-2 py-0.5 text-xs font-medium`}>
-            {issue.severity}
+            {issue.source === 'formal' && issue.outcome
+              ? outcomeLabels[issue.outcome]
+              : issue.severity}
           </span>
           {page != null && <span className="text-xs text-gray-500">Page {page}</span>}
         </div>

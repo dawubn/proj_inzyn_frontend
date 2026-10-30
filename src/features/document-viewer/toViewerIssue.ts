@@ -1,3 +1,9 @@
+import {
+  displayLabel,
+  displayMessage,
+  outcomeLabels,
+  type FormalOutcome,
+} from '@/components/analysis/formalMessages';
 import type { ValidationIssue } from '@/api/generated/model';
 import type { HighlightKind, LegalIssue, NormalizedRect, ViewerIssue } from './types';
 
@@ -15,8 +21,23 @@ export function formalToViewerIssue(issue: ValidationIssue): ViewerIssue {
   const location = issue.details?.location as FormalIssueLocation | undefined;
   const kind: HighlightKind = location?.kind === 'placeholder' ? 'placeholder' : 'expected';
 
+  const recordedOutcome = issue.details?.outcome as FormalOutcome | undefined;
+  const outcome =
+    recordedOutcome && recordedOutcome in outcomeLabels
+      ? recordedOutcome
+      : issue.severity === 'error'
+        ? 'fail'
+        : 'unknown';
+  const reasonCode =
+    typeof issue.details?.reason_code === 'string'
+      ? issue.details.reason_code
+      : issue.rule_name === 'Formal validation profile'
+        ? 'UNSUPPORTED_PROFILE'
+        : undefined;
+
   return {
-    issue: issue.message,
+    issue: displayMessage({ outcome, reason_code: reasonCode }),
+    outcome,
     text_reference: '',
     severity: issue.severity,
     page: location?.page ?? null,
@@ -25,6 +46,6 @@ export function formalToViewerIssue(issue: ValidationIssue): ViewerIssue {
       : undefined,
     source: 'formal',
     kind,
-    rule_name: issue.rule_name,
+    rule_name: displayLabel(issue.rule_name, issue.field_name),
   };
 }

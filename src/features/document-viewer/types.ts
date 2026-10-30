@@ -1,3 +1,5 @@
+import type { FormalOutcome } from '@/components/analysis/formalMessages';
+
 /** Rectangle relative to its page: all values are fractions (0-1) of page width/height. */
 export interface NormalizedRect {
   x: number;
@@ -31,6 +33,7 @@ export type HighlightKind = 'text' | 'placeholder' | 'expected';
 /** An issue shown on the document: from the AI analysis or from formal validation. */
 export interface ViewerIssue extends LegalIssue {
   source: 'ai' | 'formal';
+  outcome?: FormalOutcome;
   kind: HighlightKind;
   /** Validation rule name (formal issues only). */
   rule_name?: string;
