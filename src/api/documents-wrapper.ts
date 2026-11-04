@@ -293,3 +293,142 @@ export async function fetchDocuments(
   }
 
   return response.data as PaginatedResponseDocumentResponse;
+}
+
+export async function triggerLegalAnalysis(documentId: string): Promise<{ analysis_id: string }> {
+  const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
+    undefined,
+    { document_id: documentId },
+    { credentials: 'include' },
+  );
+
+  if (response.status !== 202) {
+    throw new Error('Failed to trigger legal analysis');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = response.data as any;
+  return {
+    analysis_id: result.analysis_id,
+  };
+}
+
+export async function patchDocumentType(
+  documentId: string,
+  documentType: string,
+): Promise<DocumentResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ document_type: documentType }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update document type');
+  }
+
+  return response.json() as Promise<DocumentResponse>;
+}
+
+export async function confirmDocumentType(
+  documentId: string,
+  confirmedType: string,
+): Promise<DocumentResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ suggested_document_type: confirmedType }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to confirm document type');
+  }
+
+  return response.json() as Promise<DocumentResponse>;
+}
+
+export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
+  const response = await getRedactionApiV1RedactionsAnalysisIdGet(analysisId, {
+    credentials: 'include',
+  });
+
+  if (response.status !== 200) {
+    throw new Error('Failed to fetch analysis status');
+  }
+
+  return response.data as DocumentAnalysisResponse;
+}
+
+// Fetches every page of the user's documents (used where only a name lookup is needed)
+export async function fetchAllDocuments(): Promise<DocumentResponse[]> {
+  let page = 1;
+  const all: DocumentResponse[] = [];
+
+  while (true) {
+    const response = await fetchDocuments(page, 100);
+    all.push(...response.items);
+
+    if (page >= response.pages) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return all;
+}
+
+export type PreviewVariant = 'original' | 'redacted';
+
+export interface PageInfo {
+  page: number;
+  width: number;
+  height: number;
+}
+
+export interface PagesManifest {
+  variants: PreviewVariant[];
+  pages: PageInfo[];
+}
+
+export async function fetchPagesManifest(analysisId: string): Promise<PagesManifest> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/${analysisId}/pages`, {
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch document pages');
+  }
+
+  return response.json() as Promise<PagesManifest>;
+}
+
+export function getPageImageUrl(
+  analysisId: string,
+  page: number,
+  variant: PreviewVariant,
+  size: 'sm' | 'lg',
+): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/redactions/${analysisId}/pages/${page}/image?variant=${variant}&size=${size}`;
+}
+
+export function getDocumentDownloadUrl(documentId: string): string {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  return `${apiUrl}/api/v1/documents/${documentId}/download`;
+}
+
+export async function deleteAnalysis(analysisId: string): Promise<void> {
+  const response = await deleteRedactionApiV1RedactionsAnalysisIdDelete(analysisId, {
+    credentials: 'include',
+  });
+
+  if (response.status !== 204) {
+    throw new Error('Failed to delete analysis');
+  }
+}
