@@ -1,14 +1,39 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+
 import { Button } from '@/components/ui/button';
-import { getStatusConfig, getDocumentTypeLabel, fetchDocuments } from '@/api/documents-wrapper';
+import { getDocumentTypeLabel, fetchDocuments } from '@/api/documents-wrapper';
 import { formatDate } from '@/lib/formatters';
+import {
+  getAnalysisStatusConfig,
+  isCompletedStatus,
+  isFailedStatus,
+  isFinishedStatus,
+  processingUrl,
+} from '@/lib/analysisStatus';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 import type { DocumentResponse } from '@/api/generated/model';
 
+function isViewDisabled(status: string): boolean {
+  return status === 'cancelled' || status === 'cancelling';
+}
+
+function renderStatusBadge(status: string) {
+  const config = getAnalysisStatusConfig(status);
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${config.className}`}
+    >
+      {config.label}
+    </span>
+  );
+}
+
 export default function AnalysisHistory() {
   const navigate = useNavigate();
+
   const [search, setSearch] = useState('');
   const [isHardRefreshing, setIsHardRefreshing] = useState(false);
 
@@ -19,95 +44,124 @@ export default function AnalysisHistory() {
     refetch: refetchAnalyses,
   } = useQuery<DashboardAnalysis[]>({
     queryKey: ['analysis-history'],
-    queryFn: () => fetchDashboardAnalyses(1000) as Promise<DashboardAnalysis[]>,
-    staleTime: 60_000,
+    queryFn: () => fetchDashboardAnalyses(1000),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const analyses = query.state.data;
+
+      if (!Array.isArray(analyses)) {
+        return false;
+      }
+
+      const hasUnfinishedProcessing = analyses.some(
+        (analysis) => !isFinishedStatus(analysis.status),
+      );
+
+      return hasUnfinishedProcessing ? 3000 : false;
+    },
   });
 
-  const { data: allDocumentsRaw, refetch: refetchDocuments } = useQuery<DocumentResponse[]>({
+  const {
+    data: allDocumentsRaw,
+    isError: isDocumentsError,
+    refetch: refetchDocuments,
+  } = useQuery<DocumentResponse[]>({
     queryKey: ['user-documents-all'],
     queryFn: async () => {
       let page = 1;
       const items: DocumentResponse[] = [];
+
       while (true) {
-        const resp = await fetchDocuments(page, 100);
-        items.push(...resp.items);
-        if (page >= resp.pages) break;
-        page++;
+        const response = await fetchDocuments(page, 100);
+
+        items.push(...response.items);
+
+        if (page >= response.pages) {
+          break;
+        }
+
+        page += 1;
       }
+
       return items;
     },
     staleTime: 30_000,
+    refetchOnMount: 'always',
   });
 
   const allAnalyses: DashboardAnalysis[] = useMemo(
-    () =>
-      isHardRefreshing || !Array.isArray(allAnalysesRaw)
-        ? []
-        : (allAnalysesRaw as DashboardAnalysis[]),
-    [isHardRefreshing, allAnalysesRaw],
+    () => (Array.isArray(allAnalysesRaw) ? allAnalysesRaw : []),
+    [allAnalysesRaw],
   );
 
   const allDocuments: DocumentResponse[] = useMemo(
-    () =>
-      isHardRefreshing || !Array.isArray(allDocumentsRaw)
-        ? []
-        : (allDocumentsRaw as DocumentResponse[]),
-    [isHardRefreshing, allDocumentsRaw],
+    () => (Array.isArray(allDocumentsRaw) ? allDocumentsRaw : []),
+    [allDocumentsRaw],
   );
 
   const documentMap = useMemo(() => {
     const map = new Map<string, DocumentResponse>();
-    allDocuments.forEach((doc) => map.set(doc.id, doc));
+
+    allDocuments.forEach((document) => {
+      map.set(document.id, document);
+    });
+
     return map;
   }, [allDocuments]);
 
   const filteredAnalyses = useMemo(() => {
-    if (!search.trim()) {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
       return allAnalyses;
     }
 
-    const q = search.toLowerCase();
-
     return allAnalyses.filter((analysis) => {
-      const doc = documentMap.get(analysis.document_id);
+      const document = documentMap.get(analysis.document_id);
       const shortId = analysis.id.slice(0, 8);
-      const baseName = doc?.original_filename ?? `Analysis ${shortId}`;
-      const title = `${baseName} (ID: ${shortId})`;
-      return title.toLowerCase().includes(q);
+      const baseName = document?.original_filename ?? `Analysis ${shortId}`;
+      const statusLabel = getAnalysisStatusConfig(analysis.status).label;
+
+      const searchableText = [
+        baseName,
+        analysis.id,
+        analysis.document_id,
+        analysis.status,
+        statusLabel,
+      ].join(' ');
+
+      return searchableText.toLowerCase().includes(query);
     });
   }, [allAnalyses, documentMap, search]);
 
-  const renderStatusBadge = (label: string) => {
-    const normalized = label.toLowerCase();
-
-    if (normalized.includes('failed') || normalized.includes('error')) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-orange-500 px-2.5 py-1 text-xs font-semibold text-white">
-          Requires attention
-        </span>
-      );
+  async function handleRefresh() {
+    if (isHardRefreshing) {
+      return;
     }
 
-    if (normalized.includes('completed')) {
-      return (
-        <span className="inline-flex items-center rounded-full bg-lime-600 px-2.5 py-1 text-xs font-semibold text-white">
-          Completed
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center rounded-full bg-sky-600 px-2.5 py-1 text-xs font-semibold text-white">
-        In progress
-      </span>
-    );
-  };
-
-  const handleRefresh = async () => {
     setIsHardRefreshing(true);
-    await Promise.all([refetchAnalyses(), refetchDocuments()]);
-    setIsHardRefreshing(false);
-  };
+
+    try {
+      await Promise.all([refetchAnalyses(), refetchDocuments()]);
+    } finally {
+      setIsHardRefreshing(false);
+    }
+  }
+
+  function handleOpenAnalysis(analysis: DashboardAnalysis) {
+    if (isViewDisabled(analysis.status)) {
+      return;
+    }
+
+    if (isCompletedStatus(analysis.status)) {
+      navigate(`/analysis/${analysis.id}`);
+      return;
+    }
+
+    navigate(processingUrl([analysis.id]));
+  }
 
   const showLoading = isLoading || isHardRefreshing;
 
@@ -115,42 +169,44 @@ export default function AnalysisHistory() {
     <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl sm:text-4xl font-semibold leading-tight tracking-tight text-[#0A0A0A]">
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight text-[#0A0A0A] sm:text-4xl">
             Analysis history
           </h1>
+
           <p className="text-sm text-[#6B7280]">Review of previously analyzed documents.</p>
         </div>
 
-        <div className="mt-10 rounded-lg border border-[#E5E5E5] bg-[#FFFFFF] p-4 shadow-sm h-auto">
+        <div className="mt-10 h-auto rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <h2 className="text-sm font-semibold text-[#111827] whitespace-nowrap">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+              <h2 className="whitespace-nowrap text-sm font-semibold text-[#111827]">
                 All analyses
               </h2>
 
-              <div className="flex flex-1 items-center justify-end gap-2">
-                <div className="flex w-[220px] sm:w-[280px] items-center rounded-full border border-[#E5E5E5] bg-white px-3 py-2">
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <div className="flex w-full min-w-0 items-center rounded-full border border-[#E5E5E5] bg-white px-3 py-2 sm:w-[280px]">
                   <input
                     type="text"
-                    className="w-full bg-transparent text-xs sm:text-sm text-[#111827] placeholder:text-[#6B7280] focus:outline-none"
-                    placeholder="Search by document name..."
+                    aria-label="Search analyses by document name, ID or status"
+                    className="w-full bg-transparent text-xs text-[#111827] placeholder:text-[#6B7280] focus:outline-none sm:text-sm"
+                    placeholder="Search by document name or ID..."
                     value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                    }}
+                    onChange={(event) => setSearch(event.target.value)}
                   />
                 </div>
 
                 <button
                   type="button"
-                  onClick={handleRefresh}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6]"
+                  onClick={() => void handleRefresh()}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Refresh list"
-                  disabled={isHardRefreshing}
+                  disabled={showLoading}
                 >
                   <span
-                    className={`text-sm font-bold ${isHardRefreshing ? 'animate-spin' : ''}`}
-                    style={{ display: 'inline-block' }}
+                    aria-hidden
+                    className={`inline-block text-sm font-bold ${
+                      isHardRefreshing ? 'animate-spin' : ''
+                    }`}
                   >
                     ⟳
                   </span>
@@ -158,86 +214,136 @@ export default function AnalysisHistory() {
               </div>
             </div>
 
-            <div className="mt-2 max-h-[515px] overflow-y-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              <div className="min-w-full">
-                <div className="flex items-center bg-[#F9FAFB] px-3 sm:px-4 py-2 rounded-t-2xl">
-                  <div className="flex-1 min-w-[150px]">
+            {isDocumentsError && (
+              <p role="alert" className="text-xs text-amber-800 sm:text-sm">
+                Could not load document details. Some document names or types may be unavailable.
+              </p>
+            )}
+
+            <div className="mt-2 max-h-[515px] overflow-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+              <div className="min-w-[860px]">
+                <div className="flex items-center rounded-t-2xl bg-[#F9FAFB] px-3 py-2 sm:px-4">
+                  <div className="min-w-[150px] flex-1">
                     <p className="text-[11px] font-semibold text-[#6B7280]">Document name</p>
                   </div>
-                  <div className="w-40">
+
+                  <div className="w-40 shrink-0">
                     <p className="text-[11px] font-semibold text-[#6B7280]">Analysis date</p>
                   </div>
-                  <div className="w-40">
+
+                  <div className="w-40 shrink-0">
                     <p className="text-[11px] font-semibold text-[#6B7280]">Document type</p>
                   </div>
-                  <div className="w-40">
+
+                  <div className="w-48 shrink-0">
                     <p className="text-[11px] font-semibold text-[#6B7280]">Status</p>
                   </div>
-                  <div className="w-28 text-right" />
+
+                  <div className="w-28 shrink-0 text-right" />
                 </div>
 
                 <div className="divide-y divide-[#E5E7EB]">
                   {showLoading ? (
-                    <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-[#737373]">
+                    <div
+                      role="status"
+                      className="px-3 py-3 text-xs text-[#737373] sm:px-4 sm:text-sm"
+                    >
                       Loading...
                     </div>
                   ) : isError ? (
-                    <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-red-600">
-                      Failed to load analyses.
+                    <div role="alert" className="px-3 py-3 text-xs text-red-600 sm:px-4 sm:text-sm">
+                      Failed to load analyses. Refresh the list to try again.
                     </div>
                   ) : filteredAnalyses.length === 0 ? (
-                    <div className="px-3 sm:px-4 py-3 text-xs sm:text-sm text-[#737373]">
-                      No analyses match the current filters.
+                    <div className="px-3 py-3 text-xs text-[#737373] sm:px-4 sm:text-sm">
+                      {search.trim()
+                        ? 'No analyses match the current filters.'
+                        : 'No analyses yet.'}
                     </div>
                   ) : (
                     filteredAnalyses.map((analysis) => {
-                      const cfg = getStatusConfig(analysis.status);
-                      const doc = documentMap.get(analysis.document_id);
+                      const document = documentMap.get(analysis.document_id);
+                      const statusConfig = getAnalysisStatusConfig(analysis.status);
 
                       const shortId = analysis.id.slice(0, 8);
-                      const baseName = doc?.original_filename ?? `Analysis ${shortId}`;
+                      const baseName = document?.original_filename ?? `Analysis ${shortId}`;
                       const title = `${baseName} (ID: ${shortId})`;
 
-                      const formattedDate = formatDate(analysis.created_at);
+                      const documentType = document?.document_type;
+                      const effectiveType =
+                        documentType && documentType !== 'unknown'
+                          ? documentType
+                          : analysis.detected_document_type;
 
-                      const docType = doc?.document_type;
-                      const displayedDocType = getDocumentTypeLabel(
-                        docType && docType !== 'unknown'
-                          ? docType
-                          : analysis.detected_document_type,
-                      );
+                      const cancelled = analysis.status === 'cancelled';
+                      const cancelling = analysis.status === 'cancelling';
+                      const completed = isCompletedStatus(analysis.status);
+                      const viewDisabled = isViewDisabled(analysis.status);
+
+                      const displayedDocumentType =
+                        effectiveType && effectiveType !== 'unknown'
+                          ? getDocumentTypeLabel(effectiveType)
+                          : cancelled || isFailedStatus(analysis.status)
+                            ? 'Not detected'
+                            : 'Not detected yet';
+
+                      const viewTitle = cancelled
+                        ? 'Processing was cancelled. Results are unavailable.'
+                        : cancelling
+                          ? 'Processing is being cancelled.'
+                          : completed
+                            ? 'View results'
+                            : 'View processing';
 
                       return (
                         <div
                           key={analysis.id}
-                          className="flex items-center bg-[#F9FAFB] px-3 sm:px-4 py-2 hover:bg-gray-50"
+                          className="flex items-center bg-[#F9FAFB] px-3 py-2 hover:bg-gray-50 sm:px-4"
                         >
-                          <div className="flex-1 min-w-[150px]">
-                            <p className="truncate text-xs sm:text-sm font-medium text-[#111827]">
+                          <div className="min-w-0 flex-1 pr-3">
+                            <p
+                              title={title}
+                              className="truncate text-xs font-medium text-[#111827] sm:text-sm"
+                            >
                               {title}
                             </p>
                           </div>
 
-                          <div className="w-40">
-                            <p className="text-[11px] sm:text-xs text-[#374151]">{formattedDate}</p>
-                          </div>
-
-                          <div className="w-40">
-                            <p className="text-[11px] sm:text-xs text-[#374151]">
-                              {displayedDocType}
+                          <div className="w-40 shrink-0">
+                            <p className="text-[11px] text-[#374151] sm:text-xs">
+                              {formatDate(analysis.created_at)}
                             </p>
                           </div>
 
-                          <div className="w-40">{renderStatusBadge(cfg.label)}</div>
-
-                          <div className="w-28 flex justify-end">
-                            <Button
-                              size="sm"
-                              className="h-9 min-h-[36px] px-4 rounded-lg bg-[#171717] text-xs sm:text-sm font-medium text-white hover:bg-[#2A2A2A]"
-                              onClick={() => navigate(`/analysis/${analysis.id}`)}
+                          <div className="w-40 shrink-0 pr-3">
+                            <p
+                              title={displayedDocumentType}
+                              className="truncate text-[11px] text-[#374151] sm:text-xs"
                             >
-                              View
-                            </Button>
+                              {displayedDocumentType}
+                            </p>
+                          </div>
+
+                          <div className="w-48 shrink-0 pr-2" title={statusConfig.label}>
+                            {renderStatusBadge(analysis.status)}
+                          </div>
+
+                          <div className="flex w-28 shrink-0 justify-end">
+                            <span
+                              title={viewTitle}
+                              className={viewDisabled ? 'cursor-not-allowed' : ''}
+                            >
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={viewDisabled}
+                                className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-4 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 sm:text-sm"
+                                onClick={() => handleOpenAnalysis(analysis)}
+                                aria-label={`${viewTitle}: ${title}`}
+                              >
+                                View
+                              </Button>
+                            </span>
                           </div>
                         </div>
                       );
