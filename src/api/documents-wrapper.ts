@@ -363,6 +363,40 @@ export function getDocumentDownloadUrl(documentId: string): string {
   return `${apiUrl}/api/v1/documents/${documentId}/download`;
 }
 
+export interface ReportFile {
+  blob: Blob;
+  filename: string;
+}
+
+function filenameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const encoded = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encoded) return decodeURIComponent(encoded[1]);
+  const plain = header.match(/filename="([^"]+)"/i);
+  return plain ? plain[1] : null;
+}
+
+export async function fetchReportPdf(analysisId: string): Promise<ReportFile> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/reports/${analysisId}/pdf`, {
+    credentials: 'include',
+  });
+
+  if (response.status === 409) {
+    throw new Error('The report will be available once the analysis is completed.');
+  }
+  if (!response.ok) {
+    throw new Error('Failed to download the report. Please try again.');
+  }
+
+  return {
+    blob: await response.blob(),
+    filename:
+      filenameFromDisposition(response.headers.get('Content-Disposition')) ??
+      `report_${analysisId.slice(0, 8)}.pdf`,
+  };
+}
+
 export async function deleteAnalysis(analysisId: string): Promise<void> {
   const response = await deleteRedactionApiV1RedactionsAnalysisIdDelete(analysisId, {
     credentials: 'include',

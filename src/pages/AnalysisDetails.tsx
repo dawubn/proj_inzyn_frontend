@@ -11,7 +11,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Trash2, FileText, Copy, CloudAlert, Brain, Download, ListChecks } from 'lucide-react';
+import {
+  Trash2,
+  FileText,
+  Copy,
+  CloudAlert,
+  Brain,
+  Download,
+  ListChecks,
+  Loader2,
+} from 'lucide-react';
 import type {
   AnalysisReportResponse,
   DocumentAnalysisResponse,
@@ -38,6 +47,7 @@ import {
   DeleteAnalysisDialog,
   type AnalysisToDelete,
 } from '@/features/analysis/DeleteAnalysisDialog';
+import { useDownloadReport } from '@/hooks/analysis/useDownloadReport';
 import {
   useMediaQuery,
   DESKTOP_QUERY,
@@ -67,6 +77,8 @@ export default function AnalysisDetails() {
   const [bubbleError, setBubbleError] = useState<string | null>(null);
   const [requestedVariant, setRequestedVariant] = useState<PreviewVariant>('redacted');
   const [isIssueSheetOpen, setIsIssueSheetOpen] = useState(false);
+
+  const downloadReport = useDownloadReport();
 
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const canHover = useMediaQuery(HOVER_QUERY);
@@ -427,6 +439,25 @@ export default function AnalysisDetails() {
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={analysis?.status !== 'completed' || downloadReport.isPending}
+              title={
+                analysis?.status !== 'completed'
+                  ? 'The report will be available once the analysis is completed'
+                  : undefined
+              }
+              onClick={() => analysisId && downloadReport.mutate(analysisId)}
+            >
+              {downloadReport.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              Download Report
+            </Button>
+            <Button
               variant="destructive"
               size="sm"
               className="gap-2"
@@ -450,6 +481,11 @@ export default function AnalysisDetails() {
             <Button variant="outline" size="sm" onClick={() => navigate('/document-analysis')}>
               Analyze Another Document
             </Button>
+            {downloadReport.error && (
+              <p className="basis-full text-xs text-red-600 lg:text-right">
+                {downloadReport.error.message}
+              </p>
+            )}
           </div>
         </div>
       </div>
