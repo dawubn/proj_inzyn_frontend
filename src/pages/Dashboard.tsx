@@ -1,24 +1,31 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/auth/useMe';
-import { getStatusConfig } from '@/api/documents-wrapper';
+import { fetchDocuments } from '@/api/documents-wrapper';
+import type { DocumentResponse } from '@/api/generated/model';
 import { formatDate } from '@/lib/formatters';
-import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
-import { X } from 'lucide-react';
 import {
-  DeleteAnalysisDialog,
-  type AnalysisToDelete,
-} from '@/features/analysis/DeleteAnalysisDialog';
+  getAnalysisStatusConfig,
+  isCompletedStatus,
+  isFinishedStatus,
+  processingUrl,
+} from '@/lib/analysisStatus';
+import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
 
+function isViewDisabled(status: string): boolean {
+  return status === 'cancelled' || status === 'cancelling';
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [analysisToDelete, setAnalysisToDelete] = useState<AnalysisToDelete | null>(null);
   const { data: user } = useMe();
+
   const [isLastAnalysisRefreshing, setIsLastAnalysisRefreshing] = useState(false);
 
   const userName = user?.full_name?.trim() || user?.email || '';
@@ -26,34 +33,78 @@ export default function Dashboard() {
   const {
     data: allAnalysesRaw,
     isLoading: isRedactionsLoading,
+    isError: isAnalysesError,
     refetch: refetchAnalyses,
   } = useQuery<DashboardAnalysis[]>({
     queryKey: ['dashboard-analyses'],
-    queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS) as Promise<DashboardAnalysis[]>,
+    queryFn: () => fetchDashboardAnalyses(MAX_ANALYSES_FOR_STATS),
     staleTime: 0,
     refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) => {
+      const analyses = query.state.data;
+
+      if (!Array.isArray(analyses)) {
+        return false;
+      }
+
+      const hasUnfinishedProcessing = analyses.some(
+        (analysis) => !isFinishedStatus(analysis.status),
+      );
+
+      return hasUnfinishedProcessing ? 3000 : false;
+    },
   });
 
-  const allAnalyses: DashboardAnalysis[] =
-    isLastAnalysisRefreshing || !Array.isArray(allAnalysesRaw) ? [] : allAnalysesRaw;
+  const {
+    data: allDocumentsRaw,
+    isLoading: isDocumentsLoading,
+    isError: isDocumentsError,
+    refetch: refetchDocuments,
+  } = useQuery<DocumentResponse[]>({
+    queryKey: ['user-documents-all'],
+    queryFn: async () => {
+      let page = 1;
+      const items: DocumentResponse[] = [];
 
-  const analyses: DashboardAnalysis[] = allAnalyses.slice(0, MAX_ANALYSES_IN_LIST);
+      while (true) {
+        const response = await fetchDocuments(page, 100);
 
-  const analysesWithLabels = allAnalyses.map((analysis) => {
-    const cfg = getStatusConfig(analysis.status);
-    return {
-      analysis,
-      label: cfg.label,
-      cfg,
-    };
+        items.push(...response.items);
+
+        if (page >= response.pages) {
+          break;
+        }
+
+        page += 1;
+      }
+
+      return items;
+    },
+    staleTime: 30_000,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  const isCompleted = (label: string) => {
-    const l = label.toLowerCase();
-    return l.includes('completed');
-  };
+  const allAnalyses: DashboardAnalysis[] = Array.isArray(allAnalysesRaw) ? allAnalysesRaw : [];
 
-  const documentsRequiringAttention = allAnalyses.filter(
+  const documentMap = useMemo(() => {
+    const map = new Map<string, DocumentResponse>();
+
+    if (Array.isArray(allDocumentsRaw)) {
+      allDocumentsRaw.forEach((document) => {
+        map.set(document.id, document);
+      });
+    }
+
+    return map;
+  }, [allDocumentsRaw]);
+
+  const analyses = allAnalyses.slice(0, MAX_ANALYSES_IN_LIST);
+
+  const completedProcessing = allAnalyses.filter((analysis) => isCompletedStatus(analysis.status));
+
+  const documentsRequiringAttention = completedProcessing.filter(
     (analysis) =>
       analysis.irregularities_count &&
       (analysis.irregularities_count.critical ||
@@ -61,8 +112,11 @@ export default function Dashboard() {
         analysis.irregularities_count.medium),
   ).length;
 
-  const irregularitiesDetected = allAnalyses.reduce((sum, analysis) => {
-    if (!analysis.irregularities_count) return sum;
+  const irregularitiesDetected = completedProcessing.reduce((sum, analysis) => {
+    if (!analysis.irregularities_count) {
+      return sum;
+    }
+
     return (
       sum +
       (analysis.irregularities_count.critical || 0) +
@@ -72,16 +126,36 @@ export default function Dashboard() {
   }, 0);
 
   const totalAnalyses = allAnalyses.length;
+  const completedAnalyses = completedProcessing.length;
 
-  const completedAnalyses = analysesWithLabels.filter(({ label }) => isCompleted(label)).length;
+  async function handleRefreshLastAnalysis() {
+    if (isLastAnalysisRefreshing) {
+      return;
+    }
 
-  const handleRefreshLastAnalysis = async () => {
     setIsLastAnalysisRefreshing(true);
-    await refetchAnalyses();
-    setIsLastAnalysisRefreshing(false);
-  };
 
-  const lastAnalysisLoading = isRedactionsLoading || isLastAnalysisRefreshing;
+    try {
+      await Promise.all([refetchAnalyses(), refetchDocuments()]);
+    } finally {
+      setIsLastAnalysisRefreshing(false);
+    }
+  }
+
+  function handleOpenAnalysis(analysis: DashboardAnalysis) {
+    if (isViewDisabled(analysis.status)) {
+      return;
+    }
+
+    if (isCompletedStatus(analysis.status)) {
+      navigate(`/analysis/${analysis.id}`);
+      return;
+    }
+
+    navigate(processingUrl([analysis.id]));
+  }
+
+  const lastAnalysisLoading = isRedactionsLoading || isDocumentsLoading || isLastAnalysisRefreshing;
 
   return (
     <div className="w-full max-w-full px-1 sm:px-2 lg:px-4">
@@ -93,6 +167,7 @@ export default function Dashboard() {
                 Hi, {userName}
               </h1>
             </div>
+
             <Button
               onClick={() => navigate('/document-analysis')}
               className="h-10 w-full rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A] sm:w-auto sm:min-w-[190px]"
@@ -103,88 +178,136 @@ export default function Dashboard() {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-12 lg:grid-cols-[1.22fr_1fr]">
-          <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-4 lg:flex lg:flex-col lg:h-full">
+          <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-4 lg:flex lg:h-full lg:flex-col">
             <div className="flex items-center justify-between">
-              <h2 className="text-base sm:text-lg font-semibold text-[#111111]">Last analysis</h2>
+              <h2 className="text-base font-semibold text-[#111111] sm:text-lg">Last analysis</h2>
+
               <button
                 type="button"
-                onClick={handleRefreshLastAnalysis}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6]"
+                onClick={() => void handleRefreshLastAnalysis()}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Refresh last analyses"
-                disabled={isLastAnalysisRefreshing}
+                disabled={lastAnalysisLoading}
               >
                 <span
-                  className={`text-sm font-bold ${isLastAnalysisRefreshing ? 'animate-spin' : ''}`}
-                  style={{ display: 'inline-block' }}
+                  aria-hidden
+                  className={`inline-block text-sm font-bold ${
+                    isLastAnalysisRefreshing ? 'animate-spin' : ''
+                  }`}
                 >
                   ⟳
                 </span>
               </button>
             </div>
 
-            <div className="mt-3 flex-1 overflow-y-auto min-h-0">
+            {isAnalysesError && (
+              <p role="alert" className="mt-3 text-xs text-red-700 sm:text-sm">
+                Could not refresh analyses. Please try again.
+              </p>
+            )}
+
+            {isDocumentsError && (
+              <p role="alert" className="mt-3 text-xs text-amber-800 sm:text-sm">
+                Could not load document names. Refresh the list to try again.
+              </p>
+            )}
+
+            <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
               {lastAnalysisLoading ? (
-                <p className="text-xs sm:text-sm text-[#737373]">Loading...</p>
+                <p role="status" className="text-xs text-[#737373] sm:text-sm">
+                  Loading...
+                </p>
               ) : analyses.length === 0 ? (
-                <p className="text-xs sm:text-sm text-[#737373]">No analysis yet.</p>
+                !isAnalysesError && (
+                  <p className="text-xs text-[#737373] sm:text-sm">No analysis yet.</p>
+                )
               ) : (
                 <div className="space-y-2">
                   {analyses.map((analysis) => {
-                    const cfg = getStatusConfig(analysis.status);
+                    const cfg = getAnalysisStatusConfig(analysis.status);
+                    const document = documentMap.get(analysis.document_id);
 
                     const shortId = analysis.id.slice(0, 8);
-                    const baseName = `Analysis ${shortId}`;
-                    const title = `${baseName} (ID: ${shortId})`;
+                    const fileName = document?.original_filename || 'Document name unavailable';
+                    const title = `${fileName} (ID: ${shortId})`;
+
+                    const viewDisabled = isViewDisabled(analysis.status);
+                    const completed = isCompletedStatus(analysis.status);
+
+                    const viewTitle =
+                      analysis.status === 'cancelled'
+                        ? 'Processing was cancelled. Results are unavailable.'
+                        : analysis.status === 'cancelling'
+                          ? 'Processing is being cancelled.'
+                          : completed
+                            ? 'View results'
+                            : 'View processing';
 
                     return (
                       <div
                         key={analysis.id}
-                        className="min-w-0 cursor-pointer rounded-md px-2 py-1.5 hover:bg-gray-50 transition"
-                        onClick={() => navigate(`/analysis/${analysis.id}`)}
+                        className={`flex w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5 ${
+                          viewDisabled ? 'bg-gray-50' : 'hover:bg-gray-50'
+                        }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs sm:text-sm font-medium text-[#111827] leading-tight">
-                              {title}
-                            </p>
-                            <p
-                              className={`truncate text-[10px] sm:text-xs font-semibold leading-tight ${cfg.color}`}
-                            >
-                              {cfg.label} • {formatDate(analysis.created_at)}
-                            </p>
-                          </div>
-                          {analysis.irregularities_count && (
-                            <div className="flex gap-1 flex-shrink-0">
-                              {analysis.irregularities_count.critical ? (
-                                <span className="bg-red-100 text-red-800 text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded">
-                                  {analysis.irregularities_count.critical}
-                                </span>
-                              ) : null}
-                              {analysis.irregularities_count.high ? (
-                                <span className="bg-orange-100 text-orange-800 text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded">
-                                  {analysis.irregularities_count.high}
-                                </span>
-                              ) : null}
-                              {analysis.irregularities_count.medium ? (
-                                <span className="bg-yellow-100 text-yellow-800 text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded">
-                                  {analysis.irregularities_count.medium}
-                                </span>
-                              ) : null}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            aria-label={`Delete ${title}`}
-                            title="Delete analysis"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAnalysisToDelete({ id: analysis.id, name: title });
-                            }}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[#9CA3AF] transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-600"
+                        <div className="min-w-0 flex-1">
+                          <p
+                            title={`${fileName} (ID: ${analysis.id})`}
+                            className={`truncate text-xs font-medium leading-tight sm:text-sm ${
+                              viewDisabled ? 'text-gray-500' : 'text-[#111827]'
+                            }`}
                           >
-                            <X size={16} />
-                          </button>
+                            {title}
+                          </p>
+
+                          <p
+                            className={`mt-1 text-[10px] font-semibold leading-tight sm:text-xs ${cfg.color}`}
+                          >
+                            {cfg.label}
+                            <span className="text-gray-500">
+                              {' '}
+                              • {formatDate(analysis.created_at)}
+                            </span>
+                          </p>
                         </div>
+
+                        {completed && analysis.irregularities_count && (
+                          <div className="flex shrink-0 gap-1">
+                            {analysis.irregularities_count.critical ? (
+                              <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-800 sm:text-xs">
+                                {analysis.irregularities_count.critical}
+                              </span>
+                            ) : null}
+
+                            {analysis.irregularities_count.high ? (
+                              <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-800 sm:text-xs">
+                                {analysis.irregularities_count.high}
+                              </span>
+                            ) : null}
+
+                            {analysis.irregularities_count.medium ? (
+                              <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800 sm:text-xs">
+                                {analysis.irregularities_count.medium}
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <span
+                          title={viewTitle}
+                          className={`shrink-0 ${viewDisabled ? 'cursor-not-allowed' : ''}`}
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={viewDisabled}
+                            onClick={() => handleOpenAnalysis(analysis)}
+                            aria-label={`${viewTitle}: ${title}`}
+                            className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-3 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100"
+                          >
+                            View
+                          </Button>
+                        </span>
                       </div>
                     );
                   })}
@@ -198,10 +321,12 @@ export default function Dashboard() {
               <h2 className="text-lg font-semibold leading-tight text-[#111111]">
                 Documents requiring attention
               </h2>
+
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <span className="text-4xl font-semibold tracking-tight text-black tabular-nums">
                   {documentsRequiringAttention}
                 </span>
+
                 <Button
                   onClick={() => navigate('/history')}
                   className="h-10 rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A]"
@@ -213,19 +338,27 @@ export default function Dashboard() {
 
             <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm sm:p-5">
               <h2 className="text-lg font-semibold text-[#111111]">Analysis Statistics</h2>
+
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 {[
-                  { label: 'Total analyses', value: totalAnalyses },
+                  {
+                    label: 'Total analyses',
+                    value: totalAnalyses,
+                  },
                   {
                     label: 'Irregularities detected',
                     value: irregularitiesDetected,
                   },
-                  { label: 'Completed', value: completedAnalyses },
+                  {
+                    label: 'Completed',
+                    value: completedAnalyses,
+                  },
                 ].map((stat) => (
                   <div key={stat.label} className="min-w-0 rounded-xl bg-[#F9FAFB] px-4 py-3">
                     <p className="wrap-break-word text-xs font-semibold leading-4 text-[#6B7280]">
                       {stat.label}
                     </p>
+
                     <p className="mt-2 wrap-break-word text-lg font-bold text-[#111827] tabular-nums">
                       {stat.value}
                     </p>
@@ -236,7 +369,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      <DeleteAnalysisDialog analysis={analysisToDelete} onClose={() => setAnalysisToDelete(null)} />
     </div>
   );
 }

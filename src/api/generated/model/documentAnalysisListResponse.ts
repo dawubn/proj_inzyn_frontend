@@ -28,6 +28,8 @@ export interface DocumentAnalysisListResponse {
   detected_document_type: string | null;
   classification_confidence: number | null;
   error_message: string | null;
+  queue_position?: number | null;
+  queued_at?: string | null;
   tesseract_words: DocumentAnalysisListResponseTesseractWords;
   legal_analysis_result?: DocumentAnalysisListResponseLegalAnalysisResult;
   readonly irregularities_count: DocumentAnalysisListResponseIrregularitiesCount;
