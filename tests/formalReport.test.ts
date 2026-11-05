@@ -122,3 +122,12 @@ test('the card preserves the linked issue message when a rule result has no expl
   const { rows } = formalReportRows(report([check()], [issue()]));
   assert.equal(displayMessage(rows[0].check), issue().message);
 });
+
+test('known success messages hide technical wording in older reports', () => {
+  const message = displayMessage({
+    outcome: 'pass',
+    reason_code: 'VALUE_FOUND',
+    message: 'Potwierdzono na podstawie Azure OCR.',
+  });
+  assert.equal(message, 'Ten element jest wypełniony.');
+});

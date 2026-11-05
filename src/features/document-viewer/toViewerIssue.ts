@@ -1,20 +1,20 @@
 import { displayLabel, displayMessage, normalizeValidationIssue } from '@/lib/formalMessages';
 import type { ValidationIssue } from '@/api/generated/model';
-import type { HighlightKind, LegalIssue, NormalizedRect, ViewerIssue } from './types';
-
-interface FormalIssueLocation {
-  kind: 'placeholder' | 'expected' | 'page';
-  page: number;
-  rects: NormalizedRect[];
-}
+import { readFormalLocation } from '@/lib/formalLocation';
+import type { HighlightKind, LegalIssue, ViewerIssue } from './types';
 
 export function aiToViewerIssue(issue: LegalIssue): ViewerIssue {
   return { ...issue, source: 'ai', kind: 'text' };
 }
 
 export function formalToViewerIssue(issue: ValidationIssue): ViewerIssue {
-  const location = issue.details?.location as FormalIssueLocation | undefined;
-  const kind: HighlightKind = location?.kind === 'placeholder' ? 'placeholder' : 'expected';
+  const location = readFormalLocation(issue.details?.location);
+  const kind: HighlightKind =
+    location?.kind === 'placeholder'
+      ? 'placeholder'
+      : location?.kind === 'expected'
+        ? 'expected'
+        : 'text';
 
   const normalized = normalizeValidationIssue(issue);
 

@@ -22,6 +22,11 @@ function locationNote(issue: ViewerIssue): string | null {
       ? 'This item needs manual review. The outline marks the area to check.'
       : 'This item needs manual review in the original document.';
   }
+  if (issue.source === 'formal' && !hasLocation) {
+    return issue.page
+      ? 'Check this item on the indicated page.'
+      : 'Check this item in the original document.';
+  }
   if (issue.kind === 'placeholder') return 'This field in the document has not been filled in.';
   if (issue.kind === 'expected') {
     return hasLocation

@@ -26,6 +26,13 @@ const fieldLabels: Record<string, string> = {
   document_type: 'Rodzaj dokumentu',
 };
 const reasonMessages: Record<string, string> = {
+  VALUE_FOUND: 'Ten element jest wypełniony.',
+  TEXT_FOUND: 'Odczytano treść dokumentu.',
+  BOTH_PARTIES_FOUND: 'Znaleziono dane obu stron.',
+  DOCUMENT_DATE_FOUND: 'Znaleziono poprawną datę dokumentu.',
+  EXPLICIT_NO_TRANSACTIONS: 'Dokument wskazuje brak transakcji w tym okresie.',
+  INVALID_OBSERVATION: 'Nie udało się odczytać zapisanych wyników. Uruchom analizę ponownie.',
+
   MASK_TYPE_MISMATCH:
     'Ukryta wartość dotyczy innego rodzaju danych. Sprawdź, czy to pole jest wypełnione.',
   UNRECOGNIZED_NUMBER: 'Nie udało się odczytać kwoty. Sprawdź ją w dokumencie.',
@@ -60,7 +67,7 @@ const reasonMessages: Record<string, string> = {
   LAYOUT_UNAVAILABLE:
     'Nie udało się dokładnie odczytać układu dokumentu. Sprawdź ten element ręcznie.',
   UNREADABLE_PAGE:
-    'Nie udało się odczytać przynajmniej jednej strony. Sprawdź czytelność dokumentu.',
+    'Nie odczytano tekstu z przynajmniej jednej strony. Sprawdź, czy jest pusta, czy wymaga wyraźniejszej kopii.',
   INSUFFICIENT_TEXT: 'Odczytano zbyt mało treści. Spróbuj przesłać wyraźniejszą kopię dokumentu.',
   NO_TEXT: 'Nie udało się odczytać dokumentu. Spróbuj przesłać wyraźniejszą kopię.',
   AZURE_OCR_REQUIRED: 'Nie udało się odczytać dokumentu. Uruchom analizę ponownie.',
