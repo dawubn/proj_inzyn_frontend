@@ -1,4 +1,4 @@
-import { outcomeLabels } from '@/components/analysis/formalMessages';
+import { outcomeLabels } from '@/lib/formalMessages';
 import { useEffect, useRef } from 'react';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';

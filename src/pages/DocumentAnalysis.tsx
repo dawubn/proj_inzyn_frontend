@@ -1,3 +1,4 @@
+import { reanalyzeDocument } from '@/lib/analysisSubmission';
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { X } from 'lucide-react';
@@ -120,7 +121,7 @@ export default function DocumentAnalysis() {
 
   function handleStartAnalysis() {
     if (selectedFiles.length === 0) {
-      setErrorMessage('Select at least one document first.');
+      setErrorMessage('Select a document first.');
       return;
     }
 
@@ -140,11 +141,10 @@ export default function DocumentAnalysis() {
     try {
       setAnalysisError('');
       setIsAnalyzing(true);
-      await patchDocumentType(
-        selectedDocId,
-        documentTypeChoice === 'auto' ? 'unknown' : documentTypeChoice,
-      );
-      const result = await triggerLegalAnalysis(selectedDocId);
+      const result = await reanalyzeDocument(selectedDocId, documentTypeChoice, {
+        updateType: patchDocumentType,
+        start: triggerLegalAnalysis,
+      });
       handleSetAnalysisId(result.analysis_id);
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : 'Failed to trigger analysis');
@@ -291,12 +291,11 @@ export default function DocumentAnalysis() {
               />
             </svg>
             <p className="text-sm font-semibold text-[#111111] sm:text-base">
-              Click to browse or drag files here
+              Click to browse or drag a file here
             </p>
             <input
               ref={fileInputRef}
               type="file"
-              multiple
               onChange={handleInputChange}
               className="hidden"
               accept=".pdf,.jpg,.jpeg,.png"

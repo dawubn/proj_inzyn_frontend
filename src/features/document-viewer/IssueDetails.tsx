@@ -1,4 +1,4 @@
-import { outcomeLabels } from '@/components/analysis/formalMessages';
+import { outcomeLabels } from '@/lib/formalMessages';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getSeverityConfig } from './severity';
 import type { ViewerIssue } from './types';

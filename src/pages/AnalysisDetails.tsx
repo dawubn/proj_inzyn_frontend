@@ -620,7 +620,7 @@ export default function AnalysisDetails() {
       </div>
 
       {/* Mobile: issues sheet and the card of the selected issue */}
-      {!isDesktop && viewerIssues.length > 0 && (
+      {!isDesktop && (
         <>
           {selectedIssueDetails ? (
             <div
@@ -643,7 +643,7 @@ export default function AnalysisDetails() {
               className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 gap-2 rounded-full shadow-lg"
             >
               <ListChecks size={16} />
-              Issues ({viewerIssues.length})
+              {viewerIssues.length ? `Issues (${viewerIssues.length})` : 'Results'}
             </Button>
           )}
 
@@ -661,18 +661,14 @@ export default function AnalysisDetails() {
                 </SheetDescription>
               </SheetHeader>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-                {formalIssues.length > 0 && (
-                  <>
-                    <div className="mb-6">
-                      <FormalValidationCard
-                        report={formalReport}
-                        isLoading={isReportLoading}
-                        {...formalCardProps}
-                      />
-                    </div>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Issues</h3>
-                  </>
-                )}
+                <div className="mb-6">
+                  <FormalValidationCard
+                    report={formalReport}
+                    isLoading={isReportLoading}
+                    {...formalCardProps}
+                  />
+                </div>
+                <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Issues</h3>
                 {issueFilters}
                 {issueList}
               </div>

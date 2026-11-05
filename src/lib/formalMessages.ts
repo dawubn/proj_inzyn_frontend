@@ -1,3 +1,5 @@
+import type { AnalysisReportResponse, ValidationIssue } from '@/api/generated/model';
+
 export type FormalOutcome = 'pass' | 'fail' | 'unknown' | 'not_applicable' | 'error';
 
 export const outcomeLabels: Record<FormalOutcome, string> = {
@@ -73,10 +75,15 @@ const reasonMessages: Record<string, string> = {
   DATE_OUT_OF_RANGE: 'Data znajduje się poza dozwolonym zakresem. Sprawdź ją w dokumencie.',
 };
 
-export function displayMessage(check: { outcome: FormalOutcome; reason_code?: string }) {
-  if (check.reason_code && reasonMessages[check.reason_code]) {
+export function displayMessage(check: {
+  outcome: FormalOutcome;
+  reason_code?: string;
+  message?: string;
+}) {
+  if (check.reason_code && Object.hasOwn(reasonMessages, check.reason_code)) {
     return reasonMessages[check.reason_code];
   }
+  if (check.message?.trim()) return check.message;
   switch (check.outcome) {
     case 'pass':
       return 'Ten element jest obecny i spełnia sprawdzane wymaganie.';
@@ -96,4 +103,98 @@ export function displayLabel(ruleName: string, fieldName?: string | null): strin
     fieldLabels[fieldName ?? ''] ??
     (ruleName === 'Formal validation profile' ? 'Rodzaj dokumentu' : ruleName)
   );
+}
+
+export function normalizeValidationIssue(issue: ValidationIssue) {
+  const value = issue.details?.outcome;
+  const outcome: FormalOutcome =
+    typeof value === 'string' && Object.hasOwn(outcomeLabels, value)
+      ? (value as FormalOutcome)
+      : issue.severity === 'error'
+        ? 'fail'
+        : 'unknown';
+  const reason_code =
+    typeof issue.details?.reason_code === 'string'
+      ? issue.details.reason_code
+      : issue.rule_name === 'Formal validation profile'
+        ? 'UNSUPPORTED_PROFILE'
+        : undefined;
+  return { outcome, reason_code, message: issue.message };
+}
+
+export type FormalCheck = {
+  rule_id: string;
+  rule_name: string;
+  field_name?: string | null;
+  outcome: FormalOutcome;
+  severity: string;
+  reason_code?: string;
+  message?: string;
+  evidence: { text: string; page?: number | null }[];
+};
+export type FormalSummary = {
+  schema_version?: number;
+  validation_status?: string;
+  rule_results?: FormalCheck[];
+};
+export type FormalRow = { check: FormalCheck; issueIndex: number | null };
+
+export function formalReportRows(report?: AnalysisReportResponse) {
+  const summary = (report?.summary ?? {}) as FormalSummary;
+  const modern = summary.schema_version === 2 && Array.isArray(summary.rule_results);
+  const issues = [...(report?.errors ?? []), ...(report?.warnings ?? [])];
+  const unused = new Set(issues.map((_, index) => index));
+  const rows: FormalRow[] = (modern ? (summary.rule_results ?? []) : []).map((check) => {
+    const candidates = [...unused].filter((index) => {
+      const issue = issues[index];
+      if (normalizeValidationIssue(issue).outcome !== check.outcome) return false;
+      return typeof issue.details?.rule_id === 'string'
+        ? issue.details.rule_id === check.rule_id
+        : issue.rule_name === check.rule_name && issue.field_name === check.field_name;
+    });
+    const issueIndex =
+      candidates.find(
+        (index) =>
+          issues[index].field_name === check.field_name &&
+          issues[index].rule_name === check.rule_name &&
+          normalizeValidationIssue(issues[index]).reason_code === check.reason_code,
+      ) ??
+      candidates.find((index) => issues[index].field_name === check.field_name) ??
+      candidates[0] ??
+      null;
+    if (issueIndex !== null) unused.delete(issueIndex);
+    return {
+      check: {
+        ...check,
+        message: check.message || (issueIndex !== null ? issues[issueIndex].message : undefined),
+      },
+      issueIndex,
+    };
+  });
+  for (const issueIndex of unused) {
+    const issue = issues[issueIndex];
+    rows.push({
+      issueIndex,
+      check: {
+        rule_id: `issue-${issueIndex}`,
+        rule_name: issue.rule_name,
+        field_name: issue.field_name,
+        severity: issue.severity,
+        ...normalizeValidationIssue(issue),
+        evidence: [],
+      },
+    });
+  }
+  // Keep clickable rows in the same order as viewer navigation (errors, then warnings).
+  const actionable = rows
+    .filter(
+      ({ check, issueIndex }) =>
+        issueIndex !== null || !['pass', 'not_applicable'].includes(check.outcome),
+    )
+    .sort((a, b) => (a.issueIndex ?? Infinity) - (b.issueIndex ?? Infinity));
+  const remaining = rows.filter(
+    ({ check, issueIndex }) =>
+      issueIndex === null && ['pass', 'not_applicable'].includes(check.outcome),
+  );
+  return { summary, modern, rows, actionable, remaining };
 }

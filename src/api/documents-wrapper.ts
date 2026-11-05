@@ -1,6 +1,19 @@
-import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
-import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet, deleteRedactionApiV1RedactionsAnalysisIdDelete } from '@/api/generated/redactions/redactions';
+import type {
+  DocumentResponse,
+  DocumentType,
+  DocumentAnalysisResponse,
+  PaginatedResponseDocumentResponse,
+} from '@/api/generated/model';
+import {
+  uploadDocumentApiV1DocumentsPost,
+  listUserDocumentsApiV1DocumentsGet,
+} from '@/api/generated/documents/documents';
+import {
+  listRedactionsApiV1RedactionsGet,
+  triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost,
+  getRedactionApiV1RedactionsAnalysisIdGet,
+  deleteRedactionApiV1RedactionsAnalysisIdDelete,
+} from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -23,7 +36,7 @@ export interface DocumentsPage {
 }
 
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-export const MAX_FILES_COUNT = 5;
+export const MAX_FILES_COUNT = 1;
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   auto: 'Auto-detect',
@@ -68,8 +81,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function validateFiles(files: File[]): string {
-  if (files.length > MAX_FILES_COUNT)
-    return `You can upload up to ${MAX_FILES_COUNT} files at once.`;
+  if (files.length > MAX_FILES_COUNT) return 'Select one document at a time.';
 
   const invalidType = files.find(
     (file) => !ALLOWED_DOCUMENT_MIME_TYPES.includes(file.type as AllowedDocumentMimeType),
@@ -132,16 +144,15 @@ export function isDuringAnalysis(status: string | undefined): boolean {
   return status === 'processing';
 }
 
-export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
+export async function uploadDocument(
+  file: File,
+  documentType = 'auto',
+): Promise<UploadedDocumentResponse> {
   const response = await uploadDocumentApiV1DocumentsPost(
-    { file },
-    { credentials: 'include' }
+    { file, document_type: (documentType === 'auto' ? 'unknown' : documentType) as DocumentType },
+    { credentials: 'include' },
   );
-
-  if (response.status !== 201) {
-    throw new Error('Document upload failed');
-  }
-
+  if (response.status !== 201) throw new Error('Document upload failed');
   const doc = response.data as DocumentResponse;
   return {
     id: doc.id,
@@ -155,7 +166,7 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
   const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 202) {
@@ -188,22 +199,24 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
     }
   });
 
-  return Array.from(documentMap.values()).slice(0, 10).map((analysis) => ({
-    id: analysis.document_id,
-    original_filename: `Document ${analysis.id}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: analysis.status as any,
-    created_at: analysis.created_at,
-    updated_at: analysis.updated_at,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    file_extension: 'pdf' as any,
-    file_size_bytes: 0,
-    mime_type: 'application/pdf',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document_type: 'unknown' as any,
-    suggested_document_type: null,
-    description: null,
-  }));
+  return Array.from(documentMap.values())
+    .slice(0, 10)
+    .map((analysis) => ({
+      id: analysis.document_id,
+      original_filename: `Document ${analysis.id}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      status: analysis.status as any,
+      created_at: analysis.created_at,
+      updated_at: analysis.updated_at,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      file_extension: 'pdf' as any,
+      file_size_bytes: 0,
+      mime_type: 'application/pdf',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      document_type: 'unknown' as any,
+      suggested_document_type: null,
+      description: null,
+    }));
 }
 
 export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]> {
@@ -246,10 +259,13 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   }));
 }
 
-export async function fetchDocuments(page: number = 1, pageSize: number = 20): Promise<PaginatedResponseDocumentResponse> {
+export async function fetchDocuments(
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<PaginatedResponseDocumentResponse> {
   const response = await listUserDocumentsApiV1DocumentsGet(
     { page, page_size: pageSize },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 200) {
@@ -263,7 +279,7 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 202) {
@@ -277,7 +293,10 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   };
 }
 
-export async function patchDocumentType(documentId: string, documentType: string): Promise<DocumentResponse> {
+export async function patchDocumentType(
+  documentId: string,
+  documentType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -293,7 +312,10 @@ export async function patchDocumentType(documentId: string, documentType: string
   return response.json() as Promise<DocumentResponse>;
 }
 
-export async function confirmDocumentType(documentId: string, confirmedType: string): Promise<DocumentResponse> {
+export async function confirmDocumentType(
+  documentId: string,
+  confirmedType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -310,10 +332,9 @@ export async function confirmDocumentType(documentId: string, confirmedType: str
 }
 
 export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
-  const response = await getRedactionApiV1RedactionsAnalysisIdGet(
-    analysisId,
-    { credentials: 'include' }
-  );
+  const response = await getRedactionApiV1RedactionsAnalysisIdGet(analysisId, {
+    credentials: 'include',
+  });
 
   if (response.status !== 200) {
     throw new Error('Failed to fetch analysis status');

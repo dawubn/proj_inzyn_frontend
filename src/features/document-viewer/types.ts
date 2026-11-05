@@ -1,4 +1,4 @@
-import type { FormalOutcome } from '@/components/analysis/formalMessages';
+import type { FormalOutcome } from '@/lib/formalMessages';
 
 /** Rectangle relative to its page: all values are fractions (0-1) of page width/height. */
 export interface NormalizedRect {

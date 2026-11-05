@@ -1,9 +1,4 @@
-import {
-  displayLabel,
-  displayMessage,
-  outcomeLabels,
-  type FormalOutcome,
-} from '@/components/analysis/formalMessages';
+import { displayLabel, displayMessage, normalizeValidationIssue } from '@/lib/formalMessages';
 import type { ValidationIssue } from '@/api/generated/model';
 import type { HighlightKind, LegalIssue, NormalizedRect, ViewerIssue } from './types';
 
@@ -21,23 +16,11 @@ export function formalToViewerIssue(issue: ValidationIssue): ViewerIssue {
   const location = issue.details?.location as FormalIssueLocation | undefined;
   const kind: HighlightKind = location?.kind === 'placeholder' ? 'placeholder' : 'expected';
 
-  const recordedOutcome = issue.details?.outcome as FormalOutcome | undefined;
-  const outcome =
-    recordedOutcome && recordedOutcome in outcomeLabels
-      ? recordedOutcome
-      : issue.severity === 'error'
-        ? 'fail'
-        : 'unknown';
-  const reasonCode =
-    typeof issue.details?.reason_code === 'string'
-      ? issue.details.reason_code
-      : issue.rule_name === 'Formal validation profile'
-        ? 'UNSUPPORTED_PROFILE'
-        : undefined;
+  const normalized = normalizeValidationIssue(issue);
 
   return {
-    issue: displayMessage({ outcome, reason_code: reasonCode }),
-    outcome,
+    issue: displayMessage(normalized),
+    outcome: normalized.outcome,
     text_reference: '',
     severity: issue.severity,
     page: location?.page ?? null,

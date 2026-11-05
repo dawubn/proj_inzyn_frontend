@@ -1,24 +1,15 @@
 import { useEffect, useRef } from 'react';
-import type { AnalysisReportResponse, ValidationIssue } from '@/api/generated/model';
+import type { AnalysisReportResponse } from '@/api/generated/model';
 import { Card, CardContent } from '@/components/ui/card';
 import { severityConfig } from '@/features/document-viewer/severity';
-import { displayLabel, displayMessage, outcomeLabels, type FormalOutcome } from './formalMessages';
-
-type Evidence = { text: string; page?: number | null };
-type Check = {
-  rule_id: string;
-  rule_name: string;
-  field_name?: string | null;
-  outcome: FormalOutcome;
-  severity: string;
-  reason_code?: string;
-  evidence: Evidence[];
-};
-type Summary = {
-  schema_version?: number;
-  validation_status?: string;
-  rule_results?: Check[];
-};
+import {
+  displayLabel,
+  displayMessage,
+  outcomeLabels,
+  formalReportRows,
+  type FormalCheck,
+  type FormalRow,
+} from '@/lib/formalMessages';
 
 const statusLabels: Record<string, string> = {
   complete: 'All required checks passed. Review any additional notes below.',
@@ -34,7 +25,7 @@ function CheckResult({
   onHover,
   reducedMotion = false,
 }: {
-  check: Check;
+  check: FormalCheck;
   selected?: boolean;
   hovered?: boolean;
   onSelect?: () => void;
@@ -113,23 +104,6 @@ function CheckResult({
   );
 }
 
-function legacyCheck(issue: ValidationIssue, index: number): Check {
-  return {
-    rule_id: `legacy-${index}`,
-    rule_name: issue.rule_name,
-    field_name: issue.field_name,
-    severity: issue.severity,
-    outcome: issue.details?.outcome === 'fail' || issue.severity === 'error' ? 'fail' : 'unknown',
-    reason_code:
-      typeof issue.details?.reason_code === 'string'
-        ? issue.details.reason_code
-        : issue.rule_name === 'Formal validation profile'
-          ? 'UNSUPPORTED_PROFILE'
-          : undefined,
-    evidence: [],
-  };
-}
-
 export function FormalValidationCard({
   report,
   isLoading,
@@ -147,28 +121,21 @@ export function FormalValidationCard({
   onHoverIssue?: (index: number | null) => void;
   reducedMotion?: boolean;
 }) {
-  const summary = (report?.summary ?? {}) as Summary;
-  const modern = summary.schema_version === 2 && Array.isArray(summary.rule_results);
-  const checks = modern ? (summary.rule_results ?? []) : [];
-  const issues = [...(report?.errors ?? []), ...(report?.warnings ?? [])];
-  const actionable = checks.filter((check) => !['pass', 'not_applicable'].includes(check.outcome));
-  const remaining = checks.filter((check) => ['pass', 'not_applicable'].includes(check.outcome));
-  const renderCheck = (check: Check, key: string, legacyIndex?: number) => {
-    const issueIndex =
-      legacyIndex ?? issues.findIndex((issue) => issue.details?.rule_id === check.rule_id);
+  const { summary, modern, rows, actionable, remaining } = formalReportRows(report);
+  const renderCheck = ({ check, issueIndex }: FormalRow, index: number) => {
     return (
       <CheckResult
-        key={key}
+        key={`${check.rule_id}-${index}`}
         check={check}
-        selected={issueIndex >= 0 && selectedIssueIndex === issueIndex}
-        hovered={issueIndex >= 0 && hoveredIssueIndex === issueIndex}
+        selected={issueIndex !== null && selectedIssueIndex === issueIndex}
+        hovered={issueIndex !== null && hoveredIssueIndex === issueIndex}
         onSelect={
-          issueIndex >= 0 && onSelectIssue
+          issueIndex !== null && onSelectIssue
             ? () => onSelectIssue(selectedIssueIndex === issueIndex ? null : issueIndex)
             : undefined
         }
         onHover={
-          issueIndex >= 0 && onHoverIssue
+          issueIndex !== null && onHoverIssue
             ? (hovered) => onHoverIssue(hovered ? issueIndex : null)
             : undefined
         }
@@ -195,23 +162,22 @@ export function FormalValidationCard({
                 </p>
                 {summary.validation_status !== 'unsupported' && (
                   <p className="mt-1 text-xs text-gray-500">
-                    Needs attention: {checks.filter((check) => check.outcome === 'fail').length}
+                    Needs attention: {rows.filter(({ check }) => check.outcome === 'fail').length}
                     {' · '}Review:{' '}
-                    {checks.filter((check) => ['unknown', 'error'].includes(check.outcome)).length}
+                    {
+                      rows.filter(({ check }) => ['unknown', 'error'].includes(check.outcome))
+                        .length
+                    }
                   </p>
                 )}
               </div>
-              {actionable.map((check, index) => renderCheck(check, `${check.rule_id}-${index}`))}
+              {actionable.map(renderCheck)}
               {remaining.length > 0 && (
                 <details>
                   <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
                     Other checks ({remaining.length})
                   </summary>
-                  <div className="mt-3 space-y-3">
-                    {remaining.map((check, index) => (
-                      <CheckResult key={`${check.rule_id}-${index}`} check={check} />
-                    ))}
-                  </div>
+                  <div className="mt-3 space-y-3">{remaining.map(renderCheck)}</div>
                 </details>
               )}
             </>
@@ -221,9 +187,10 @@ export function FormalValidationCard({
               <p className="text-sm text-gray-600">
                 This is an older report. Run the analysis again to see updated results.
               </p>
-              {issues.map((issue, index) =>
-                renderCheck(legacyCheck(issue, index), `legacy-${index}`, index),
+              {rows.length === 0 && (
+                <p className="text-sm text-gray-600">No formal issues detected.</p>
               )}
+              {rows.map(renderCheck)}
             </>
           )}
         </div>
