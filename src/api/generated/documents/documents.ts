@@ -269,6 +269,13 @@ export const uploadDocumentApiV1DocumentsPost = async (
     formData.append(`description`, bodyUploadDocumentApiV1DocumentsPost.description);
   }
 
+  if (
+    bodyUploadDocumentApiV1DocumentsPost.document_type !== undefined &&
+    bodyUploadDocumentApiV1DocumentsPost.document_type !== null
+  ) {
+    formData.append(`document_type`, bodyUploadDocumentApiV1DocumentsPost.document_type);
+  }
+
   const res = await fetch(getUploadDocumentApiV1DocumentsPostUrl(), {
     ...options,
     method: 'POST',
