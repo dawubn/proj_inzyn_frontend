@@ -1606,3 +1606,123 @@ export const useDeleteRedactionApiV1RedactionsAnalysisIdDelete = <
     queryClient,
   );
 };
+
+export type cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse200 = {
+  data: DocumentAnalysisResponse;
+  status: 200;
+};
+
+export type cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponseError = (
+  | { data: void; status: 401 }
+  | { data: void; status: 403 }
+  | { data: void; status: 404 }
+  | { data: void; status: 409 }
+  | { data: HTTPValidationError; status: 422 }
+) & {
+  headers: Headers;
+};
+
+export type cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse =
+  | (cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse200 & { headers: Headers })
+  | cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponseError;
+
+export const getCancelRedactionApiV1RedactionsAnalysisIdCancelPostUrl = (analysisId: string) => {
+  return `http://localhost:8000/api/v1/redactions/${analysisId}/cancel`;
+};
+
+/**
+ * Cancel a queued or running analysis. Only owner or admin can cancel.
+ * @summary Cancel Redaction
+ */
+export const cancelRedactionApiV1RedactionsAnalysisIdCancelPost = async (
+  analysisId: string,
+  options?: RequestInit,
+): Promise<cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse> => {
+  const res = await fetch(getCancelRedactionApiV1RedactionsAnalysisIdCancelPostUrl(analysisId), {
+    ...options,
+    method: 'POST',
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse['data'] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as cancelRedactionApiV1RedactionsAnalysisIdCancelPostResponse;
+};
+
+export const getCancelRedactionApiV1RedactionsAnalysisIdCancelPostMutationOptions = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>,
+    TError,
+    { analysisId: string },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>,
+  TError,
+  { analysisId: string },
+  TContext
+> => {
+  const mutationKey = ['cancelRedactionApiV1RedactionsAnalysisIdCancelPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>,
+    { analysisId: string }
+  > = (props) => {
+    const { analysisId } = props ?? {};
+
+    return cancelRedactionApiV1RedactionsAnalysisIdCancelPost(analysisId, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelRedactionApiV1RedactionsAnalysisIdCancelPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>
+>;
+
+export type CancelRedactionApiV1RedactionsAnalysisIdCancelPostMutationError =
+  void | HTTPValidationError;
+
+/**
+ * @summary Cancel Redaction
+ */
+export const useCancelRedactionApiV1RedactionsAnalysisIdCancelPost = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>,
+      TError,
+      { analysisId: string },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelRedactionApiV1RedactionsAnalysisIdCancelPost>>,
+  TError,
+  { analysisId: string },
+  TContext
+> => {
+  return useMutation(
+    getCancelRedactionApiV1RedactionsAnalysisIdCancelPostMutationOptions(options),
+    queryClient,
+  );
+};

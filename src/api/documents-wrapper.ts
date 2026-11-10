@@ -25,6 +25,7 @@ export interface UploadedDocumentResponse {
 export interface AnalysisResponse {
   id: string;
   status?: string;
+  queue_position?: number | null;
 }
 
 export interface DocumentsPage {
@@ -36,7 +37,7 @@ export interface DocumentsPage {
 }
 
 export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-export const MAX_FILES_COUNT = 1;
+export const MAX_FILES_COUNT = 5;
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   auto: 'Auto-detect',
@@ -81,7 +82,8 @@ function formatFileSize(bytes: number): string {
 }
 
 export function validateFiles(files: File[]): string {
-  if (files.length > MAX_FILES_COUNT) return 'Select one document at a time.';
+  if (files.length > MAX_FILES_COUNT)
+    return `You can upload up to ${MAX_FILES_COUNT} files at once.`;
 
   const invalidType = files.find(
     (file) => !ALLOWED_DOCUMENT_MIME_TYPES.includes(file.type as AllowedDocumentMimeType),
@@ -111,11 +113,12 @@ export const DEFAULT_STATUS_CONFIG: StatusConfig = {
 export const STATUS_CONFIG_MAP = {
   processed: { label: 'Completed', color: 'text-[#65A30D]' },
   processing: { label: 'During analysis', color: 'text-[#0284C7]' },
-  queued: { label: 'Queued', color: 'text-[#D97706]' },
+  queued: { label: 'Waiting for analysis', color: 'text-[#D97706]' },
   uploaded: { label: 'Queued', color: 'text-[#D97706]' },
   pending: { label: 'Queued', color: 'text-[#D97706]' },
   failed: { label: 'Problem with execution', color: 'text-[#B91C1C]' },
   archived: { label: 'Archived', color: 'text-[#6B7280]' },
+  cancelled: { label: 'Cancelled', color: 'text-[#6B7280]' },
   completed: { label: 'Completed', color: 'text-[#65A30D]' },
   in_progress: { label: 'In progress', color: 'text-[#0284C7]' },
   ocr_in_progress: { label: 'OCR in progress', color: 'text-[#0284C7]' },
@@ -178,7 +181,27 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
+    queue_position: analysis.queue_position ?? null,
   };
+}
+
+export async function cancelAnalysis(analysisId: string): Promise<DocumentAnalysisResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(
+    `${apiUrl}/api/v1/redactions/${encodeURIComponent(analysisId)}/cancel`,
+    {
+      method: 'POST',
+      credentials: 'include',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 409 ? 'Analysis has already finished.' : 'Could not cancel the analysis.',
+    );
+  }
+
+  return response.json() as Promise<DocumentAnalysisResponse>;
 }
 
 export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
@@ -341,6 +364,25 @@ export async function getAnalysisStatus(analysisId: string): Promise<DocumentAna
   }
 
   return response.data as DocumentAnalysisResponse;
+}
+
+// Fetches every page of the user's documents (used where only a name lookup is needed)
+export async function fetchAllDocuments(): Promise<DocumentResponse[]> {
+  let page = 1;
+  const all: DocumentResponse[] = [];
+
+  while (true) {
+    const response = await fetchDocuments(page, 100);
+    all.push(...response.items);
+
+    if (page >= response.pages) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return all;
 }
 
 export type PreviewVariant = 'original' | 'redacted';
