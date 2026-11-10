@@ -131,3 +131,28 @@ test('known success messages hide technical wording in older reports', () => {
   });
   assert.equal(message, 'Ten element jest wypełniony.');
 });
+
+test('additional blank-field suggestions preserve the message, excerpt and viewer index', () => {
+  const warning = issue({
+    rule_name: 'Ulica',
+    field_name: 'possible_empty_field',
+    severity: 'warning',
+    message: 'Możliwe niewypełnione pole „Ulica” (strona 2). Sprawdź, czy wymaga uzupełnienia.',
+    details: {
+      reason_code: 'POSSIBLE_EMPTY_FIELD',
+      outcome: 'unknown',
+      advisory: true,
+      evidence: [{ text: 'przy ulicy ....', page: 2 }, null, { invalid: true }],
+      location: { page: 2, kind: 'evidence', rects: [] },
+    },
+  });
+  const { actionable, remaining } = formalReportRows(
+    report([check({ outcome: 'pass' })], [], [warning]),
+  );
+  assert.equal(remaining.length, 1);
+  assert.equal(actionable.length, 1);
+  assert.equal(actionable[0].issueIndex, 0);
+  assert.equal(actionable[0].check.outcome, 'unknown');
+  assert.equal(displayMessage(actionable[0].check), warning.message);
+  assert.deepEqual(actionable[0].check.evidence, [{ text: 'przy ulicy ....', page: 2 }]);
+});

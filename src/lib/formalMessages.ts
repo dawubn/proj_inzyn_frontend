@@ -146,6 +146,17 @@ export type FormalSummary = {
 };
 export type FormalRow = { check: FormalCheck; issueIndex: number | null };
 
+function issueEvidence(issue: ValidationIssue): FormalCheck['evidence'] {
+  const evidence = issue.details?.evidence;
+  if (!Array.isArray(evidence)) return [];
+  return evidence.flatMap((entry: unknown) => {
+    if (!entry || typeof entry !== 'object' || !('text' in entry)) return [];
+    if (typeof entry.text !== 'string') return [];
+    const page = 'page' in entry && typeof entry.page === 'number' ? entry.page : undefined;
+    return [{ text: entry.text, page }];
+  });
+}
+
 export function formalReportRows(report?: AnalysisReportResponse) {
   const summary = (report?.summary ?? {}) as FormalSummary;
   const modern = summary.schema_version === 2 && Array.isArray(summary.rule_results);
@@ -188,7 +199,7 @@ export function formalReportRows(report?: AnalysisReportResponse) {
         field_name: issue.field_name,
         severity: issue.severity,
         ...normalizeValidationIssue(issue),
-        evidence: [],
+        evidence: issueEvidence(issue),
       },
     });
   }

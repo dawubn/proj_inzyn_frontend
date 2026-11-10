@@ -86,13 +86,13 @@ function CheckResult({
       {check.evidence?.length > 0 && (
         <details className="mt-2 text-xs text-gray-600">
           <summary className="cursor-pointer font-medium hover:text-gray-900">
-            View document excerpt
+            View document fragment
           </summary>
           <ul className="mt-2 space-y-2">
             {check.evidence.map((item, index) => (
               <li key={index} className="break-words rounded bg-white/60 p-2">
                 <span className="font-medium">
-                  {item.page ? `Page ${item.page}` : 'Document excerpt'}
+                  {item.page ? `Page ${item.page}` : 'Document fragment'}
                 </span>
                 <blockquote className="mt-1 whitespace-pre-wrap">{item.text}</blockquote>
               </li>
