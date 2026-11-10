@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Register from './pages/Registration';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
+import DocumentProcessing from './pages/DocumentProcessing';
 import AnalysisDetails from './pages/AnalysisDetails';
 import OcrResults from './pages/OcrResultsDetailed';
 import AnalysisHistory from '@/pages/AnalysisHistory';
@@ -12,6 +13,7 @@ import AnalysisHistory from '@/pages/AnalysisHistory';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import { useAuthContext } from '@/context/auth-context';
+import { PROCESSING_ROUTE } from '@/lib/analysisStatus';
 
 function App() {
   const authContext = useAuthContext();
@@ -22,27 +24,29 @@ function App() {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/users/me`, {
           credentials: 'include',
         });
+
         authContext?.setIsAuthenticated(response.ok);
       } catch {
         authContext?.setIsAuthenticated(false);
       }
     };
 
-    checkAuth();
+    void checkAuth();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* public routes */}
+        {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
 
-        {/* opcjonalnie zostawiasz testówkę */}
+        {/* Test route */}
         <Route path="/test" element={<h1>TEST</h1>} />
 
-        {/* protected routes with layout */}
+        {/* Protected routes with layout */}
         <Route
           element={
             <ProtectedRoute>
@@ -56,11 +60,14 @@ function App() {
 
           <Route path="/document-analysis" element={<DocumentAnalysis />} />
 
+          <Route path={PROCESSING_ROUTE} element={<DocumentProcessing />} />
+
           <Route path="/rule-profiles" element={<div>Rule profiles</div>} />
 
           <Route path="/account-details" element={<div>Account details</div>} />
 
           <Route path="/analysis/:analysisId" element={<AnalysisDetails />} />
+
           <Route path="/analysis/:analysisId/ocr" element={<OcrResults />} />
         </Route>
       </Routes>

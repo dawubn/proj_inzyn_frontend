@@ -1,6 +1,18 @@
-import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
-import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet, deleteRedactionApiV1RedactionsAnalysisIdDelete } from '@/api/generated/redactions/redactions';
+import type {
+  DocumentResponse,
+  DocumentAnalysisResponse,
+  PaginatedResponseDocumentResponse,
+} from '@/api/generated/model';
+import {
+  uploadDocumentApiV1DocumentsPost,
+  listUserDocumentsApiV1DocumentsGet,
+} from '@/api/generated/documents/documents';
+import {
+  listRedactionsApiV1RedactionsGet,
+  triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost,
+  getRedactionApiV1RedactionsAnalysisIdGet,
+  deleteRedactionApiV1RedactionsAnalysisIdDelete,
+} from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -12,6 +24,7 @@ export interface UploadedDocumentResponse {
 export interface AnalysisResponse {
   id: string;
   status?: string;
+  queue_position?: number | null;
 }
 
 export interface DocumentsPage {
@@ -99,11 +112,12 @@ export const DEFAULT_STATUS_CONFIG: StatusConfig = {
 export const STATUS_CONFIG_MAP = {
   processed: { label: 'Completed', color: 'text-[#65A30D]' },
   processing: { label: 'During analysis', color: 'text-[#0284C7]' },
-  queued: { label: 'Queued', color: 'text-[#D97706]' },
+  queued: { label: 'Waiting for analysis', color: 'text-[#D97706]' },
   uploaded: { label: 'Queued', color: 'text-[#D97706]' },
   pending: { label: 'Queued', color: 'text-[#D97706]' },
   failed: { label: 'Problem with execution', color: 'text-[#B91C1C]' },
   archived: { label: 'Archived', color: 'text-[#6B7280]' },
+  cancelled: { label: 'Cancelled', color: 'text-[#6B7280]' },
   completed: { label: 'Completed', color: 'text-[#65A30D]' },
   in_progress: { label: 'In progress', color: 'text-[#0284C7]' },
   ocr_in_progress: { label: 'OCR in progress', color: 'text-[#0284C7]' },
@@ -133,10 +147,7 @@ export function isDuringAnalysis(status: string | undefined): boolean {
 }
 
 export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
-  const response = await uploadDocumentApiV1DocumentsPost(
-    { file },
-    { credentials: 'include' }
-  );
+  const response = await uploadDocumentApiV1DocumentsPost({ file }, { credentials: 'include' });
 
   if (response.status !== 201) {
     throw new Error('Document upload failed');
@@ -155,7 +166,7 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
   const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 202) {
@@ -167,7 +178,27 @@ export async function startDocumentAnalysis(documentId: string): Promise<Analysi
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
+    queue_position: analysis.queue_position ?? null,
   };
+}
+
+export async function cancelAnalysis(analysisId: string): Promise<DocumentAnalysisResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(
+    `${apiUrl}/api/v1/redactions/${encodeURIComponent(analysisId)}/cancel`,
+    {
+      method: 'POST',
+      credentials: 'include',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 409 ? 'Analysis has already finished.' : 'Could not cancel the analysis.',
+    );
+  }
+
+  return response.json() as Promise<DocumentAnalysisResponse>;
 }
 
 export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
@@ -188,22 +219,24 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
     }
   });
 
-  return Array.from(documentMap.values()).slice(0, 10).map((analysis) => ({
-    id: analysis.document_id,
-    original_filename: `Document ${analysis.id}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: analysis.status as any,
-    created_at: analysis.created_at,
-    updated_at: analysis.updated_at,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    file_extension: 'pdf' as any,
-    file_size_bytes: 0,
-    mime_type: 'application/pdf',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document_type: 'unknown' as any,
-    suggested_document_type: null,
-    description: null,
-  }));
+  return Array.from(documentMap.values())
+    .slice(0, 10)
+    .map((analysis) => ({
+      id: analysis.document_id,
+      original_filename: `Document ${analysis.id}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      status: analysis.status as any,
+      created_at: analysis.created_at,
+      updated_at: analysis.updated_at,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      file_extension: 'pdf' as any,
+      file_size_bytes: 0,
+      mime_type: 'application/pdf',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      document_type: 'unknown' as any,
+      suggested_document_type: null,
+      description: null,
+    }));
 }
 
 export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]> {
@@ -246,10 +279,13 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   }));
 }
 
-export async function fetchDocuments(page: number = 1, pageSize: number = 20): Promise<PaginatedResponseDocumentResponse> {
+export async function fetchDocuments(
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<PaginatedResponseDocumentResponse> {
   const response = await listUserDocumentsApiV1DocumentsGet(
     { page, page_size: pageSize },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 200) {
@@ -263,7 +299,7 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 202) {
@@ -277,7 +313,10 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   };
 }
 
-export async function patchDocumentType(documentId: string, documentType: string): Promise<DocumentResponse> {
+export async function patchDocumentType(
+  documentId: string,
+  documentType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -293,7 +332,10 @@ export async function patchDocumentType(documentId: string, documentType: string
   return response.json() as Promise<DocumentResponse>;
 }
 
-export async function confirmDocumentType(documentId: string, confirmedType: string): Promise<DocumentResponse> {
+export async function confirmDocumentType(
+  documentId: string,
+  confirmedType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -310,16 +352,34 @@ export async function confirmDocumentType(documentId: string, confirmedType: str
 }
 
 export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
-  const response = await getRedactionApiV1RedactionsAnalysisIdGet(
-    analysisId,
-    { credentials: 'include' }
-  );
+  const response = await getRedactionApiV1RedactionsAnalysisIdGet(analysisId, {
+    credentials: 'include',
+  });
 
   if (response.status !== 200) {
     throw new Error('Failed to fetch analysis status');
   }
 
   return response.data as DocumentAnalysisResponse;
+}
+
+// Fetches every page of the user's documents (used where only a name lookup is needed)
+export async function fetchAllDocuments(): Promise<DocumentResponse[]> {
+  let page = 1;
+  const all: DocumentResponse[] = [];
+
+  while (true) {
+    const response = await fetchDocuments(page, 100);
+    all.push(...response.items);
+
+    if (page >= response.pages) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return all;
 }
 
 export type PreviewVariant = 'original' | 'redacted';
