@@ -58,13 +58,8 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run tests if present
-        run: |
-          if npm run | grep -q " test"; then
-            npm run test
-          else
-            echo "No test script found, skipping tests"
-          fi
+      - name: Run tests
+        run: npm test
 
       - name: Build application
         run: npm run build

@@ -4,17 +4,30 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Trash2, FileText, Copy, CloudAlert, Brain, Download, ListChecks } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import {
+  Trash2,
+  FileText,
+  Copy,
+  CloudAlert,
+  Brain,
+  Download,
+  ListChecks,
+  Loader2,
+} from 'lucide-react';
 import type {
   AnalysisReportResponse,
   DocumentAnalysisResponse,
   DocumentResponse,
 } from '@/api/generated/model';
 import { useGetReportApiV1ReportsAnalysisIdGet } from '@/api/generated/reports/reports';
-import {
-  useGetRedactionApiV1RedactionsAnalysisIdGet,
-} from '@/api/generated/redactions/redactions';
+import { useGetRedactionApiV1RedactionsAnalysisIdGet } from '@/api/generated/redactions/redactions';
 import {
   getDocumentTypeLabel,
   patchDocumentType,
@@ -24,6 +37,7 @@ import {
   getDocumentDownloadUrl,
   type PreviewVariant,
 } from '@/api/documents-wrapper';
+import { FormalValidationCard } from '@/components/analysis/FormalValidationCard';
 import { DocumentViewer } from '@/features/document-viewer/DocumentViewer';
 import { IssueDetails } from '@/features/document-viewer/IssueDetails';
 import { IssueList } from '@/features/document-viewer/IssueList';
@@ -33,6 +47,7 @@ import {
   DeleteAnalysisDialog,
   type AnalysisToDelete,
 } from '@/features/analysis/DeleteAnalysisDialog';
+import { useDownloadReport } from '@/hooks/analysis/useDownloadReport';
 import {
   useMediaQuery,
   DESKTOP_QUERY,
@@ -62,6 +77,8 @@ export default function AnalysisDetails() {
   const [bubbleError, setBubbleError] = useState<string | null>(null);
   const [requestedVariant, setRequestedVariant] = useState<PreviewVariant>('redacted');
   const [isIssueSheetOpen, setIsIssueSheetOpen] = useState(false);
+
+  const downloadReport = useDownloadReport();
 
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const canHover = useMediaQuery(HOVER_QUERY);
@@ -93,10 +110,6 @@ export default function AnalysisDetails() {
   const analysis = analysisData?.data as DocumentAnalysisResponse | undefined;
   const formalReport =
     reportData?.status === 200 ? (reportData.data as AnalysisReportResponse) : undefined;
-  const formalIssues = useMemo(
-    () => [...(formalReport?.errors || []), ...(formalReport?.warnings || [])],
-    [formalReport],
-  );
 
   const [docInfo, setDocInfo] = useState<DocumentResponse | null>(null);
 
@@ -108,7 +121,7 @@ export default function AnalysisDetails() {
       .then((data) => {
         if (data) setDocInfo(data);
       })
-      .catch(() => { });
+      .catch(() => {});
   }, [analysis?.document_id]);
 
   const [bubbleDismissed, setBubbleDismissed] = useState(false);
@@ -161,6 +174,11 @@ export default function AnalysisDetails() {
       ((analysis?.legal_analysis_result as { errors?: LegalIssue[] } | null | undefined)?.errors ??
         []) as LegalIssue[],
     [analysis?.legal_analysis_result],
+  );
+
+  const formalIssues = useMemo(
+    () => [...(formalReport?.errors ?? []), ...(formalReport?.warnings ?? [])],
+    [formalReport],
   );
 
   // AI issues first, then formal issues: one index space shared by the lists and the viewer
@@ -253,7 +271,22 @@ export default function AnalysisDetails() {
     },
   };
   const issueList = <IssueList items={filteredItems} {...issueListProps} />;
-  const formalIssueList = <IssueList items={formalItems} {...issueListProps} />;
+  const formalCardProps = {
+    selectedIssueIndex:
+      selectedErrorIndex != null && selectedErrorIndex >= errors.length
+        ? selectedErrorIndex - errors.length
+        : null,
+    hoveredIssueIndex:
+      hoveredErrorIndex != null && hoveredErrorIndex >= errors.length
+        ? hoveredErrorIndex - errors.length
+        : null,
+    onSelectIssue: (index: number | null) =>
+      issueListProps.onSelect(index == null ? null : errors.length + index),
+    onHoverIssue: canHover
+      ? (index: number | null) => setHoveredErrorIndex(index == null ? null : errors.length + index)
+      : undefined,
+    reducedMotion,
+  };
 
   const issueFilters = (
     <>
@@ -270,10 +303,11 @@ export default function AnalysisDetails() {
           <button
             key={severity}
             onClick={() => setFilterSeverity(severity)}
-            className={`rounded-md px-3 py-1 text-sm font-medium transition ${filterSeverity === severity
-              ? 'bg-gray-900 text-white'
-              : 'text-gray-700 hover:bg-gray-100'
-              }`}
+            className={`rounded-md px-3 py-1 text-sm font-medium transition ${
+              filterSeverity === severity
+                ? 'bg-gray-900 text-white'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
           >
             {severity.charAt(0).toUpperCase() + severity.slice(1)}
           </button>
@@ -387,14 +421,15 @@ export default function AnalysisDetails() {
                   </button>
                 </div>
                 <div
-                  className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${analysis.status === 'completed'
-                    ? 'bg-green-100 text-green-800'
-                    : analysis.status === 'in_progress'
-                      ? 'bg-blue-100 text-blue-800'
-                      : analysis.status === 'ocr_failed'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold whitespace-nowrap ${
+                    analysis.status === 'completed'
+                      ? 'bg-green-100 text-green-800'
+                      : analysis.status === 'in_progress'
+                        ? 'bg-blue-100 text-blue-800'
+                        : analysis.status === 'ocr_failed'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                  }`}
                 >
                   {analysis.status.charAt(0).toUpperCase() +
                     analysis.status.slice(1).replace(/_/g, ' ')}
@@ -403,6 +438,25 @@ export default function AnalysisDetails() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              disabled={analysis?.status !== 'completed' || downloadReport.isPending}
+              title={
+                analysis?.status !== 'completed'
+                  ? 'The report will be available once the analysis is completed'
+                  : undefined
+              }
+              onClick={() => analysisId && downloadReport.mutate(analysisId)}
+            >
+              {downloadReport.isPending ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
+              Download Report
+            </Button>
             <Button
               variant="destructive"
               size="sm"
@@ -427,6 +481,11 @@ export default function AnalysisDetails() {
             <Button variant="outline" size="sm" onClick={() => navigate('/document-analysis')}>
               Analyze Another Document
             </Button>
+            {downloadReport.error && (
+              <p className="basis-full text-xs text-red-600 lg:text-right">
+                {downloadReport.error.message}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -435,33 +494,11 @@ export default function AnalysisDetails() {
       <div className="flex flex-col gap-6 py-3 sm:px-6 lg:flex-row">
         {/* Left Panel - sticks while the document scrolls (desktop) */}
         <div className="order-2 flex shrink-0 flex-col gap-6 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-12rem)] lg:w-96 lg:self-start lg:overflow-y-auto">
-          <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-80">
-            <CardContent className="p-6 flex flex-col max-h-80">
-              <h2 className="mb-4 font-semibold text-gray-900">Formal Issues</h2>
-
-              {isReportLoading && (
-                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-                  Loading formal issues...
-                </div>
-              )}
-
-              {!isReportLoading && !formalReport && (
-                <div className="rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-                  Formal issues are not available yet.
-                </div>
-              )}
-
-              {!isReportLoading && formalReport && formalIssues.length === 0 && (
-                <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-700">
-                  No formal issues detected.
-                </div>
-              )}
-
-              {formalIssues.length > 0 && (
-                <div className="overflow-y-auto p-0.5">{formalIssueList}</div>
-              )}
-            </CardContent>
-          </Card>
+          <FormalValidationCard
+            report={formalReport}
+            isLoading={isReportLoading}
+            {...formalCardProps}
+          />
 
           {/* Issues Found Card - on mobile the list lives in a bottom sheet */}
           <Card className="hidden shrink-0 flex-col border border-gray-200 bg-white shadow-none lg:flex">
@@ -545,10 +582,11 @@ export default function AnalysisDetails() {
                             role="radio"
                             aria-checked={variant === option}
                             onClick={() => setRequestedVariant(option)}
-                            className={`rounded px-3 py-1 text-xs font-medium transition ${variant === option
-                              ? 'bg-white text-gray-900 shadow-sm'
-                              : 'text-gray-600 hover:text-gray-900'
-                              }`}
+                            className={`rounded px-3 py-1 text-xs font-medium transition ${
+                              variant === option
+                                ? 'bg-white text-gray-900 shadow-sm'
+                                : 'text-gray-600 hover:text-gray-900'
+                            }`}
                           >
                             {option === 'redacted' ? 'Redacted' : 'Original'}
                           </button>
@@ -618,7 +656,7 @@ export default function AnalysisDetails() {
       </div>
 
       {/* Mobile: issues sheet and the card of the selected issue */}
-      {!isDesktop && viewerIssues.length > 0 && (
+      {!isDesktop && (
         <>
           {selectedIssueDetails ? (
             <div
@@ -641,12 +679,15 @@ export default function AnalysisDetails() {
               className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 gap-2 rounded-full shadow-lg"
             >
               <ListChecks size={16} />
-              Issues ({viewerIssues.length})
+              {viewerIssues.length ? `Issues (${viewerIssues.length})` : 'Results'}
             </Button>
           )}
 
           <Sheet open={isIssueSheetOpen} onOpenChange={setIsIssueSheetOpen}>
-            <SheetContent side="bottom" className="flex max-h-[80dvh] flex-col gap-0 rounded-t-xl bg-white">
+            <SheetContent
+              side="bottom"
+              className="flex max-h-[80dvh] flex-col gap-0 rounded-t-xl bg-white"
+            >
               <SheetHeader className="pb-2">
                 <SheetTitle className="flex items-center gap-3">
                   Issues Found <AiBadge />
@@ -656,13 +697,14 @@ export default function AnalysisDetails() {
                 </SheetDescription>
               </SheetHeader>
               <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6">
-                {formalIssues.length > 0 && (
-                  <>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-900">Formal Issues</h3>
-                    <div className="mb-6">{formalIssueList}</div>
-                    <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Issues</h3>
-                  </>
-                )}
+                <div className="mb-6">
+                  <FormalValidationCard
+                    report={formalReport}
+                    isLoading={isReportLoading}
+                    {...formalCardProps}
+                  />
+                </div>
+                <h3 className="mb-3 text-sm font-semibold text-gray-900">AI Issues</h3>
                 {issueFilters}
                 {issueList}
               </div>

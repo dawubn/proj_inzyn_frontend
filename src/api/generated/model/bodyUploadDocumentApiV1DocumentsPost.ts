@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+import type { DocumentType } from './documentType';
+
 export interface BodyUploadDocumentApiV1DocumentsPost {
   file: Blob;
   description?: string | null;
+  document_type?: DocumentType;
 }

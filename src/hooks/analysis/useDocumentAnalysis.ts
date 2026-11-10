@@ -4,23 +4,24 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { uploadDocument, startDocumentAnalysis } from '@/api/documents-wrapper';
 
+import { createDocumentSubmission } from '@/lib/analysisSubmission';
+
 export function useDocumentAnalysis() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
+  const [submit] = useState(() =>
+    createDocumentSubmission({ upload: uploadDocument, start: startDocumentAnalysis }),
+  );
+
   const mutation = useMutation({
-    mutationFn: async (files: File[]) => {
+    mutationFn: async ({ files, documentType }: { files: File[]; documentType: string }) => {
       const progressInterval = window.setInterval(() => {
         setProgress((current) => (current >= 85 ? current : current + 5));
       }, 300);
 
       try {
-        for (const file of files) {
-          const uploadedDocument = await uploadDocument(file);
-          const result = await startDocumentAnalysis(uploadedDocument.id);
-          window.clearInterval(progressInterval);
-          return result; // Return analysis_id
-        }
+        return await submit(files, documentType);
       } finally {
         window.clearInterval(progressInterval);
       }

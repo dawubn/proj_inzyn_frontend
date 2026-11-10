@@ -1,3 +1,4 @@
+import { reanalyzeDocument } from '@/lib/analysisSubmission';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -348,18 +349,18 @@ export default function DocumentAnalysis() {
 
     const startedIds: string[] = [];
     const processed = new Set<string>();
-    const warnings: string[] = [];
 
     try {
       for (const item of queue) {
         let documentId = item.documentId;
+        const isNewUpload = !documentId;
 
         if (!documentId) {
           if (!item.file) {
             throw new Error('The source file is missing. Add it again.');
           }
 
-          const uploadedDocument = await uploadDocument(item.file);
+          const uploadedDocument = await uploadDocument(item.file, item.profile);
           documentId = uploadedDocument.id;
 
           // Zachowujemy ID uploadu na wypadek błędu uruchomienia analizy.
@@ -370,18 +371,12 @@ export default function DocumentAnalysis() {
           );
         }
 
-        if (item.profile !== AUTO) {
-          try {
-            await patchDocumentType(documentId, item.profile);
-          } catch {
-            warnings.push(
-              `${item.name}: Could not apply the selected document type. ` +
-                'The previously stored type or automatic detection will be used.',
-            );
-          }
-        }
-
-        const analysis = await startDocumentAnalysis(documentId);
+        const analysis = isNewUpload
+          ? await startDocumentAnalysis(documentId)
+          : await reanalyzeDocument(documentId, item.profile, {
+              updateType: patchDocumentType,
+              start: startDocumentAnalysis,
+            });
 
         startedIds.push(analysis.id);
         processed.add(item.id);
@@ -391,15 +386,7 @@ export default function DocumentAnalysis() {
       setSelectedIds(new Set());
       setBulkProfile('');
 
-      const url = processingUrl(startedIds);
-
-      if (warnings.length > 0) {
-        navigate(url, {
-          state: { warning: warnings.join('\n') },
-        });
-      } else {
-        navigate(url);
-      }
+      navigate(processingUrl(startedIds));
     } catch (error) {
       const remainingItems = queue.filter((item) => !processed.has(item.id));
 
@@ -415,7 +402,6 @@ export default function DocumentAnalysis() {
         const notStartedNames = remainingItems.map((item) => item.name).join('\n');
 
         const warning = [
-          ...warnings,
           message,
           `${startedIds.length} document(s) were already sent for analysis.`,
           'The following documents were not started. Add them again from your device or the document library:',
@@ -426,7 +412,7 @@ export default function DocumentAnalysis() {
           state: { warning },
         });
       } else {
-        setErrorMessage([...warnings, message].join('\n'));
+        setErrorMessage(message);
       }
     } finally {
       invalidateDocumentQueries();

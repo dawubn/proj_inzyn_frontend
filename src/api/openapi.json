@@ -1808,6 +1808,10 @@
                             }
                         ],
                         "title": "Description"
+                    },
+                    "document_type": {
+                        "$ref": "#/components/schemas/DocumentType",
+                        "default": "unknown"
                     }
                 },
                 "type": "object",
