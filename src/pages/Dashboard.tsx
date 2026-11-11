@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/auth/useMe';
@@ -17,6 +18,7 @@ import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentAp
 
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
+const MIN_REFRESH_SPIN_MS = 500;
 
 function isViewDisabled(status: string): boolean {
   return status === 'cancelled' || status === 'cancelling';
@@ -136,7 +138,11 @@ export default function Dashboard() {
     setIsLastAnalysisRefreshing(true);
 
     try {
-      await Promise.all([refetchAnalyses(), refetchDocuments()]);
+      await Promise.all([
+        refetchAnalyses(),
+        refetchDocuments(),
+        new Promise((resolve) => setTimeout(resolve, MIN_REFRESH_SPIN_MS)),
+      ]);
     } finally {
       setIsLastAnalysisRefreshing(false);
     }
@@ -185,18 +191,15 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => void handleRefreshLastAnalysis()}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] enabled:hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Refresh last analyses"
+                title="Refresh"
                 disabled={lastAnalysisLoading}
               >
-                <span
+                <RefreshCw
                   aria-hidden
-                  className={`inline-block text-sm font-bold ${
-                    isLastAnalysisRefreshing ? 'animate-spin' : ''
-                  }`}
-                >
-                  ⟳
-                </span>
+                  className={`h-4 w-4 ${isLastAnalysisRefreshing ? 'animate-spin' : ''}`}
+                />
               </button>
             </div>
 
@@ -213,7 +216,7 @@ export default function Dashboard() {
             )}
 
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-              {lastAnalysisLoading ? (
+              {isRedactionsLoading || isDocumentsLoading ? (
                 <p role="status" className="text-xs text-[#737373] sm:text-sm">
                   Loading...
                 </p>

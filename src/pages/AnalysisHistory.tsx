@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { getDocumentTypeLabel, fetchDocuments } from '@/api/documents-wrapper';
@@ -14,6 +15,8 @@ import {
 } from '@/lib/analysisStatus';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 import type { DocumentResponse } from '@/api/generated/model';
+
+const MIN_REFRESH_SPIN_MS = 500;
 
 function isViewDisabled(status: string): boolean {
   return status === 'cancelled' || status === 'cancelling';
@@ -144,7 +147,11 @@ export default function AnalysisHistory() {
     setIsHardRefreshing(true);
 
     try {
-      await Promise.all([refetchAnalyses(), refetchDocuments()]);
+      await Promise.all([
+        refetchAnalyses(),
+        refetchDocuments(),
+        new Promise((resolve) => setTimeout(resolve, MIN_REFRESH_SPIN_MS)),
+      ]);
     } finally {
       setIsHardRefreshing(false);
     }
@@ -198,18 +205,15 @@ export default function AnalysisHistory() {
                 <button
                   type="button"
                   onClick={() => void handleRefresh()}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] enabled:hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Refresh list"
+                  title="Refresh"
                   disabled={showLoading}
                 >
-                  <span
+                  <RefreshCw
                     aria-hidden
-                    className={`inline-block text-sm font-bold ${
-                      isHardRefreshing ? 'animate-spin' : ''
-                    }`}
-                  >
-                    ⟳
-                  </span>
+                    className={`h-4 w-4 ${isHardRefreshing ? 'animate-spin' : ''}`}
+                  />
                 </button>
               </div>
             </div>
@@ -243,7 +247,7 @@ export default function AnalysisHistory() {
                 </div>
 
                 <div className="divide-y divide-[#E5E7EB]">
-                  {showLoading ? (
+                  {isLoading ? (
                     <div
                       role="status"
                       className="px-3 py-3 text-xs text-[#737373] sm:px-4 sm:text-sm"
