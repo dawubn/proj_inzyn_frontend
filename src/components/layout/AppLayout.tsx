@@ -56,7 +56,7 @@ export default function AppLayout() {
           navigate(path);
           setIsSidebarOpen(false);
         }}
-        className={`flex w-full cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${isActive ? 'bg-gray-100 text-black' : 'text-gray-600 hover:bg-gray-50 hover:text-black'
+        className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${isActive ? 'bg-white font-medium text-black shadow-sm' : 'text-gray-600 hover:bg-white/70 hover:text-black'
           }`}
       >
         <Icon size={16} />
@@ -67,8 +67,8 @@ export default function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0">
-      <header className="flex shrink-0 items-start justify-between px-8 py-6">
-        <div>
+      <header className="flex shrink-0 items-start justify-between px-4 py-4 sm:px-8 sm:py-6">
+        <div className="min-w-0 flex-1">
           <h1
             onClick={() => navigate('/dashboard')}
             className="cursor-pointer text-lg font-semibold transition-opacity hover:opacity-70"
@@ -76,11 +76,13 @@ export default function AppLayout() {
             CerberDoc
           </h1>
 
-          <div className="-ml-2 mt-10 flex items-center gap-1 text-xs text-gray-500 sm:ml-0 sm:mt-4 sm:gap-3 sm:text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-1 text-xs text-gray-500 sm:mt-4 sm:gap-3 sm:text-sm">
             {breadcrumbs.length > 1 && (
               <button
+                type="button"
+                aria-label="Back"
                 onClick={() => navigate(breadcrumbs[breadcrumbs.length - 2].path)}
-                className="cursor-pointer text-gray-700 hover:text-black"
+                className="-my-2 -ml-2 cursor-pointer rounded-md p-2 text-gray-700 hover:bg-gray-100 hover:text-black"
               >
                 <ArrowLeft className="h-3.5 w-3.5 sm:h-[18px] sm:w-[18px]" />
               </button>
@@ -90,13 +92,15 @@ export default function AppLayout() {
               const isLast = index === breadcrumbs.length - 1;
 
               return (
-                <div key={breadcrumb.path} className="flex items-center gap-1 sm:gap-3">
+                <div key={breadcrumb.path} className="flex min-w-0 items-center gap-1 sm:gap-3">
                   <span
                     onClick={() => {
                       if (!isLast) navigate(breadcrumb.path);
                     }}
                     className={
-                      isLast ? 'font-medium text-gray-900' : 'cursor-pointer hover:text-black'
+                      isLast
+                        ? 'min-w-0 break-all font-medium text-gray-900'
+                        : 'cursor-pointer hover:text-black'
                     }
                   >
                     {breadcrumb.label}
@@ -111,9 +115,13 @@ export default function AppLayout() {
 
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <SheetTrigger asChild>
-            <button className="flex cursor-pointer items-center gap-3 rounded-full hover:bg-gray-50">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback>
+            <button
+              type="button"
+              aria-label="Open menu"
+              className="flex shrink-0 cursor-pointer items-center gap-3 rounded-full hover:bg-gray-50"
+            >
+              <Avatar className="h-10 w-10 after:border-[#E5E5E5]">
+                <AvatarFallback className="bg-white text-gray-600">
                   <User size={18} />
                 </AvatarFallback>
               </Avatar>
@@ -125,15 +133,15 @@ export default function AppLayout() {
             side="right"
             className="w-[280px] border-l border-[#E5E5E5] bg-[#F5F5F5]/80 px-6 py-6 backdrop-blur-md [&>button]:cursor-pointer"
           >
-            <SheetHeader>
+            <SheetHeader className="p-0">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
               <SheetDescription className="sr-only">
                 Application navigation and user account options
               </SheetDescription>
 
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>
+                <Avatar className="h-10 w-10 after:border-[#E5E5E5]">
+                  <AvatarFallback className="bg-white text-gray-600">
                     <User size={18} />
                   </AvatarFallback>
                 </Avatar>
@@ -145,7 +153,7 @@ export default function AppLayout() {
               </div>
             </SheetHeader>
 
-            <Separator className="my-6" />
+            <Separator className="my-6 bg-[#E5E5E5]" />
 
             <nav className="space-y-6">
               <div>
@@ -167,7 +175,7 @@ export default function AppLayout() {
               <Button
                 onClick={handleLogoutClick}
                 disabled={logoutMutation.isPending}
-                className="w-full cursor-pointer bg-black text-white hover:bg-black/90 disabled:opacity-50"
+                className="h-10 w-full cursor-pointer rounded-lg bg-[#171717] text-white hover:bg-[#2A2A2A] disabled:opacity-50"
               >
                 <LogOut size={16} />
                 {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
@@ -177,7 +185,7 @@ export default function AppLayout() {
         </Sheet>
       </header>
 
-      <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+      <main className="px-4 pb-4 sm:px-8 sm:pb-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
         <div className="rounded-sm bg-white">
           <Outlet />
         </div>

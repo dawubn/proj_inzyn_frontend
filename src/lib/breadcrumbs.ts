@@ -6,7 +6,7 @@ export type Breadcrumb = {
 };
 
 const DASHBOARD: Breadcrumb = { label: 'Dashboard', path: '/dashboard' };
-const HISTORY: Breadcrumb = { label: 'History of analysis', path: '/history' };
+const HISTORY: Breadcrumb = { label: 'Analysis history', path: '/history' };
 
 const breadcrumbMap: Record<string, Breadcrumb[]> = {
   '/dashboard': [DASHBOARD],

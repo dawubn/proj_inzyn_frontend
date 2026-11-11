@@ -56,7 +56,7 @@ function CheckResult({
   const label = displayLabel(check.rule_name, check.field_name);
   return (
     <div
-      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded ${selected ? 'ring-2 ring-gray-900' : hovered ? 'brightness-95' : ''}`}
+      className={`border-l-4 ${config.border} ${config.bg} p-3 rounded-lg ${selected ? 'ring-2 ring-gray-900' : hovered ? 'brightness-95' : ''}`}
     >
       <button
         ref={buttonRef}
@@ -144,12 +144,14 @@ export function FormalValidationCard({
     );
   };
   return (
-    <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-[28rem] flex flex-col min-h-0">
-      <CardContent className="p-6 flex flex-col min-h-0">
+    <Card className="rounded-lg border border-[#E5E5E5] bg-white py-0 shadow-sm ring-0 shrink-0 max-h-[28rem] flex flex-col min-h-0">
+      <CardContent className="p-3 sm:p-5 flex flex-col min-h-0">
         <div className="mb-4 flex items-center gap-3">
-          <h2 className="font-semibold text-gray-900">Document Completeness</h2>
+          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">
+            Document Completeness
+          </h2>
         </div>
-        <div className="space-y-3 overflow-y-auto min-h-0">
+        <div className="space-y-3 overflow-y-auto min-h-0 p-0.5">
           {isLoading && <p className="text-sm text-gray-600">Loading results...</p>}
           {!isLoading && !report && (
             <p className="text-sm text-gray-600">Results are not available yet.</p>

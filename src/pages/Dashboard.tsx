@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/auth/useMe';
@@ -17,6 +18,7 @@ import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentAp
 
 const MAX_ANALYSES_FOR_STATS = 50;
 const MAX_ANALYSES_IN_LIST = 10;
+const MIN_REFRESH_SPIN_MS = 500;
 
 function isViewDisabled(status: string): boolean {
   return status === 'cancelled' || status === 'cancelling';
@@ -136,7 +138,11 @@ export default function Dashboard() {
     setIsLastAnalysisRefreshing(true);
 
     try {
-      await Promise.all([refetchAnalyses(), refetchDocuments()]);
+      await Promise.all([
+        refetchAnalyses(),
+        refetchDocuments(),
+        new Promise((resolve) => setTimeout(resolve, MIN_REFRESH_SPIN_MS)),
+      ]);
     } finally {
       setIsLastAnalysisRefreshing(false);
     }
@@ -158,12 +164,12 @@ export default function Dashboard() {
   const lastAnalysisLoading = isRedactionsLoading || isDocumentsLoading || isLastAnalysisRefreshing;
 
   return (
-    <div className="w-full max-w-full px-1 sm:px-2 lg:px-4">
+    <div className="w-full max-w-full sm:px-2 lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:p-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-full overflow-hidden sm:max-w-[70%]">
-              <h1 className="truncate text-2xl font-semibold tracking-tight text-[#111111] sm:text-[32px]">
+              <h1 className="truncate text-2xl font-semibold tracking-tight text-[#0A0A0A] sm:text-4xl">
                 Hi, {userName}
               </h1>
             </div>
@@ -185,18 +191,15 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => void handleRefreshLastAnalysis()}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] enabled:hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-8"
                 aria-label="Refresh last analyses"
+                title="Refresh"
                 disabled={lastAnalysisLoading}
               >
-                <span
+                <RefreshCw
                   aria-hidden
-                  className={`inline-block text-sm font-bold ${
-                    isLastAnalysisRefreshing ? 'animate-spin' : ''
-                  }`}
-                >
-                  ⟳
-                </span>
+                  className={`h-4 w-4 ${isLastAnalysisRefreshing ? 'animate-spin' : ''}`}
+                />
               </button>
             </div>
 
@@ -213,13 +216,13 @@ export default function Dashboard() {
             )}
 
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto">
-              {lastAnalysisLoading ? (
+              {isRedactionsLoading || isDocumentsLoading ? (
                 <p role="status" className="text-xs text-[#737373] sm:text-sm">
                   Loading...
                 </p>
               ) : analyses.length === 0 ? (
                 !isAnalysesError && (
-                  <p className="text-xs text-[#737373] sm:text-sm">No analysis yet.</p>
+                  <p className="text-xs text-[#737373] sm:text-sm">No analyses yet.</p>
                 )
               ) : (
                 <div className="space-y-2">
@@ -303,7 +306,7 @@ export default function Dashboard() {
                             disabled={viewDisabled}
                             onClick={() => handleOpenAnalysis(analysis)}
                             aria-label={`${viewTitle}: ${title}`}
-                            className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-3 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100"
+                            className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-3 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 sm:px-4 sm:text-sm"
                           >
                             View
                           </Button>
@@ -317,8 +320,8 @@ export default function Dashboard() {
           </section>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm sm:p-5">
-              <h2 className="text-lg font-semibold leading-tight text-[#111111]">
+            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-5">
+              <h2 className="text-base font-semibold leading-tight text-[#111111] sm:text-lg">
                 Documents requiring attention
               </h2>
 
@@ -336,8 +339,10 @@ export default function Dashboard() {
               </div>
             </section>
 
-            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm sm:p-5">
-              <h2 className="text-lg font-semibold text-[#111111]">Analysis Statistics</h2>
+            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-5">
+              <h2 className="text-base font-semibold text-[#111111] sm:text-lg">
+                Analysis statistics
+              </h2>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
                 {[
@@ -354,7 +359,7 @@ export default function Dashboard() {
                     value: completedAnalyses,
                   },
                 ].map((stat) => (
-                  <div key={stat.label} className="min-w-0 rounded-xl bg-[#F9FAFB] px-4 py-3">
+                  <div key={stat.label} className="min-w-0 rounded-lg bg-[#F9FAFB] px-4 py-3">
                     <p className="wrap-break-word text-xs font-semibold leading-4 text-[#6B7280]">
                       {stat.label}
                     </p>

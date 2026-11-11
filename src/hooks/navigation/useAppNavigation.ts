@@ -8,7 +8,7 @@ import { getBreadcrumbAnalysisId, getBreadcrumbs } from '@/lib/breadcrumbs';
 
 export const menuItems = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'History of analysis', path: '/history', icon: History },
+  { label: 'Analysis history', path: '/history', icon: History },
   { label: 'Document Analysis', path: '/document-analysis', icon: FileText },
   { label: 'Rule profiles', path: '/rule-profiles', icon: Settings },
   { label: 'Account details', path: '/account-details', icon: User },

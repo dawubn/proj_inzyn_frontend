@@ -53,7 +53,9 @@ export function IssueDetails({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className={`${config.badge} rounded px-2 py-0.5 text-xs font-medium`}>
+          <span
+            className={`${config.badge} rounded px-2 py-0.5 text-xs font-medium first-letter:uppercase`}
+          >
             {issue.source === 'formal' && issue.outcome
               ? outcomeLabels[issue.outcome]
               : issue.severity}
@@ -63,7 +65,7 @@ export function IssueDetails({
         <button
           type="button"
           onClick={onClose}
-          className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+          className="rounded p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900 sm:p-1.5"
           aria-label="Close"
         >
           <X size={16} />
@@ -84,7 +86,7 @@ export function IssueDetails({
           <button
             type="button"
             onClick={onPrevious}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+            className="inline-flex min-h-9 items-center gap-1 rounded px-2 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 sm:min-h-0 sm:py-1"
           >
             <ChevronLeft size={14} /> Previous
           </button>
@@ -94,7 +96,7 @@ export function IssueDetails({
           <button
             type="button"
             onClick={onNext}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100"
+            className="inline-flex min-h-9 items-center gap-1 rounded px-2 py-2 text-xs font-medium text-gray-700 hover:bg-gray-100 sm:min-h-0 sm:py-1"
           >
             Next <ChevronRight size={14} />
           </button>
