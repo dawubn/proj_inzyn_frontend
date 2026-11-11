@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { FolderOpen, Upload } from 'lucide-react';
+import { FolderOpen, Upload, X } from 'lucide-react';
 
 import { formatFileSize } from '@/lib/formatters';
 import { processingUrl } from '@/lib/analysisStatus';
@@ -45,16 +45,16 @@ function extensionOf(name: string): string {
 }
 
 const btnBase =
-  'inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[5px] border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-9 sm:text-xs';
+  'inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10';
 
-const btnDark = `${btnBase} border-transparent bg-[#101010] text-white enabled:hover:bg-[#333]`;
+const btnDark = `${btnBase} border-transparent bg-[#171717] text-white enabled:hover:bg-[#2A2A2A]`;
 
-const btnLight = `${btnBase} border-[#d6d6d6] bg-white text-[#303030] enabled:hover:bg-[#f3f3f3]`;
+const btnLight = `${btnBase} border-gray-300 bg-white text-gray-900 enabled:hover:bg-gray-50`;
 
 const btnDanger = `${btnBase} border-[#e7caca] bg-white text-[#a33636] enabled:hover:bg-[#fff3f3]`;
 
 const selectCls =
-  'block min-h-11 w-full min-w-0 cursor-pointer rounded-[5px] border border-[#d5d5d5] bg-white py-1.5 pl-2.5 pr-7 text-base text-[#303030] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#555] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:text-xs';
+  'block min-h-11 w-full min-w-0 cursor-pointer rounded-lg border border-gray-300 bg-white py-1.5 pl-2.5 pr-7 text-base text-[#0A0A0A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171717] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-10 sm:text-sm';
 
 const rowGrid = 'flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_290px] sm:items-stretch';
 
@@ -427,15 +427,15 @@ export default function DocumentAnalysis() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] sm:px-5 sm:py-8">
+    <div className="mx-auto w-full max-w-[1120px] sm:px-2 lg:px-4">
       <section
         aria-labelledby="page-title"
         aria-busy={isStarting}
-        className="rounded-[10px] border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
+        className="rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
       >
         <h1
           id="page-title"
-          className="mb-5 text-center text-[25px] font-bold leading-tight tracking-tight text-[#171717] sm:text-[28px]"
+          className="mb-5 text-center text-2xl font-semibold leading-tight tracking-tight text-[#0A0A0A] sm:text-4xl"
         >
           Document Analysis
         </h1>
@@ -444,7 +444,7 @@ export default function DocumentAnalysis() {
           <div
             ref={errorRef}
             role="alert"
-            className="mb-3 whitespace-pre-line break-words rounded-md border border-[#f0d1d1] bg-white p-3 text-xs leading-relaxed text-[#a33636] [overflow-wrap:anywhere] sm:text-[13px]"
+            className="mb-3 whitespace-pre-line break-words rounded-lg border border-red-300 bg-red-50 p-3 text-sm leading-relaxed text-red-700 [overflow-wrap:anywhere]"
           >
             {errorMessage}
           </div>
@@ -452,20 +452,20 @@ export default function DocumentAnalysis() {
 
         <section
           aria-labelledby="upload-title"
-          className="mb-2.5 rounded-[7px] border border-[#dedede] bg-white p-2 sm:px-3"
+          className="mb-2.5 rounded-lg border border-[#E5E5E5] bg-white p-2 sm:px-3"
         >
           <h2
             id="upload-title"
-            className="mb-1 text-center text-[10px] font-medium leading-snug text-[#929292]"
+            className="mb-1 text-center text-xs font-medium leading-snug text-[#6B7280]"
           >
             Add to analyze
           </h2>
 
-          <div className="grid grid-cols-1 items-stretch gap-2 rounded-md border border-dashed border-[#aaa] bg-white p-2 sm:grid-cols-[minmax(0,1fr)_26px_minmax(0,1fr)] sm:gap-3 sm:px-2.5 sm:py-2">
-            <div className="flex min-w-0 flex-col items-center rounded-[5px] bg-white px-1 py-1 text-center">
-              <FolderOpen className="mb-1 h-[18px] w-[18px] text-[#5e5e5e]" aria-hidden />
+          <div className="grid grid-cols-1 items-stretch gap-2 rounded-lg border border-dashed border-gray-300 bg-white p-2 sm:grid-cols-[minmax(0,1fr)_26px_minmax(0,1fr)] sm:gap-3 sm:px-2.5 sm:py-2">
+            <div className="flex min-w-0 flex-col items-center rounded-lg bg-white px-1 py-1 text-center">
+              <FolderOpen className="mb-1 h-[18px] w-[18px] text-[#6B7280]" aria-hidden />
 
-              <h3 className="mb-1.5 text-[11px] font-semibold">Previously uploaded</h3>
+              <h3 className="mb-1.5 text-sm font-semibold">Previously uploaded</h3>
 
               <div className="flex w-full max-w-[350px] items-center gap-2">
                 <label className="sr-only" htmlFor="library-select">
@@ -477,7 +477,7 @@ export default function DocumentAnalysis() {
                   value={libraryChoice}
                   onChange={(event) => setLibraryChoice(event.target.value)}
                   disabled={isStarting || docsLoading}
-                  className={`${selectCls} flex-1 sm:!min-h-[30px] sm:!py-1`}
+                  className={`${selectCls} flex-1`}
                 >
                   <option value="">
                     {docsLoading ? 'Loading documents...' : 'Choose a document'}
@@ -499,7 +499,7 @@ export default function DocumentAnalysis() {
                   type="button"
                   onClick={addFromLibrary}
                   disabled={isStarting || !libraryChoice || queuedDocumentIds.has(libraryChoice)}
-                  className={`${btnLight} shrink-0 sm:!min-h-[30px] sm:!py-1`}
+                  className={`${btnLight} shrink-0`}
                 >
                   Add
                 </button>
@@ -516,7 +516,7 @@ export default function DocumentAnalysis() {
                   type="button"
                   onClick={() => void fetchNextPage()}
                   disabled={isStarting || isFetchingNextPage}
-                  className="mt-1.5 min-h-8 text-xs text-[#737373] underline underline-offset-[3px] hover:text-[#111] disabled:opacity-50"
+                  className="mt-1.5 min-h-11 text-xs text-[#6B7280] underline underline-offset-[3px] hover:text-[#0A0A0A] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-8"
                 >
                   {isFetchingNextPage ? 'Loading...' : 'Load more documents'}
                 </button>
@@ -524,8 +524,8 @@ export default function DocumentAnalysis() {
             </div>
 
             <div aria-hidden className="relative flex min-h-3 items-center justify-center">
-              <span className="absolute inset-x-0 top-1/2 h-px bg-[#e3e3e3] sm:inset-x-auto sm:inset-y-0 sm:left-1/2 sm:top-0 sm:h-auto sm:w-px" />
-              <span className="relative bg-white px-2 text-[10px] text-[#999] sm:px-0 sm:py-2">
+              <span className="absolute inset-x-0 top-1/2 h-px bg-[#E5E5E5] sm:inset-x-auto sm:inset-y-0 sm:left-1/2 sm:top-0 sm:h-auto sm:w-px" />
+              <span className="relative bg-white px-2 text-xs text-[#6B7280] sm:px-0 sm:py-2">
                 or
               </span>
             </div>
@@ -535,16 +535,16 @@ export default function DocumentAnalysis() {
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`flex min-w-0 flex-col items-center rounded-[5px] bg-white px-1 py-1 text-center ${
-                isDragging ? 'outline-2 outline-offset-2 outline-dashed outline-[#555]' : ''
+              className={`flex min-w-0 flex-col items-center rounded-lg bg-white px-1 py-1 text-center ${
+                isDragging ? 'outline-2 outline-offset-2 outline-dashed outline-[#171717]' : ''
               }`}
             >
-              <Upload className="mb-1 h-[18px] w-[18px] text-[#5e5e5e]" aria-hidden />
+              <Upload className="mb-1 h-[18px] w-[18px] text-[#6B7280]" aria-hidden />
 
-              <h3 className="mb-1.5 text-[11px] font-semibold">From this device</h3>
+              <h3 className="mb-1.5 text-sm font-semibold">From this device</h3>
 
               <div className="flex min-h-[30px] flex-wrap items-center justify-center gap-2">
-                <span className="hidden text-[11px] text-[#777] sm:inline">Drop files here or</span>
+                <span className="hidden text-xs text-[#6B7280] sm:inline">Drop files here or</span>
 
                 <input
                   type="file"
@@ -558,13 +558,13 @@ export default function DocumentAnalysis() {
 
                 <label
                   htmlFor="file-input"
-                  className={`${btnDark} cursor-pointer peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#555] peer-disabled:cursor-not-allowed peer-disabled:opacity-40 sm:!min-h-[30px] sm:!py-1`}
+                  className={`${btnDark} cursor-pointer hover:bg-[#2A2A2A] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#171717] peer-disabled:cursor-not-allowed peer-disabled:opacity-40 peer-disabled:hover:bg-[#171717]`}
                 >
-                  Select Files
+                  Select files
                 </label>
               </div>
 
-              <p className="mt-1.5 text-[10px] leading-normal text-[#969696]">
+              <p className="mt-1.5 text-xs leading-normal text-[#6B7280]">
                 PDF, JPG, PNG · up to 20 MB per file · max {MAX_FILES_COUNT} files
               </p>
             </div>
@@ -574,13 +574,13 @@ export default function DocumentAnalysis() {
         {selectedIds.size > 0 && (
           <section
             aria-label="Actions for selected documents"
-            className="mb-2 grid grid-cols-2 items-center gap-2 rounded-[7px] border border-[#dedede] bg-white p-2.5 sm:flex sm:flex-wrap sm:gap-2.5 sm:px-3"
+            className="mb-2 grid grid-cols-2 items-center gap-2 rounded-lg border border-[#E5E5E5] bg-white p-2.5 sm:flex sm:flex-wrap sm:gap-2.5 sm:px-3"
           >
-            <span className="col-span-2 whitespace-nowrap text-xs font-semibold sm:col-auto">
+            <span className="col-span-2 whitespace-nowrap text-sm font-semibold sm:col-auto">
               {selectedIds.size} selected
             </span>
 
-            <span aria-hidden className="hidden h-6 w-px bg-[#ddd] sm:block" />
+            <span aria-hidden className="hidden h-6 w-px bg-[#E5E5E5] sm:block" />
 
             <label className="sr-only" htmlFor="bulk-profile">
               Choose document type for selected files
@@ -626,9 +626,9 @@ export default function DocumentAnalysis() {
 
         <section
           aria-label="Documents for analysis"
-          className="overflow-hidden rounded-[7px] border border-[#dedede] bg-white"
+          className="overflow-hidden rounded-lg border border-[#E5E5E5] bg-white"
         >
-          <div className="flex min-h-11 items-stretch border-b border-[#dedede] bg-white sm:grid sm:grid-cols-[minmax(0,1fr)_290px]">
+          <div className="flex min-h-11 items-stretch border-b border-[#E5E5E5] bg-[#F9FAFB] sm:grid sm:grid-cols-[minmax(0,1fr)_290px]">
             <div className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
               <input
                 ref={selectAllRef}
@@ -637,23 +637,21 @@ export default function DocumentAnalysis() {
                 disabled={queue.length === 0 || isStarting}
                 onChange={(event) => toggleSelectAll(event.target.checked)}
                 aria-label="Select all documents"
-                className="h-5 w-5 shrink-0 cursor-pointer accent-[#111] disabled:cursor-not-allowed sm:h-4 sm:w-4"
+                className="h-5 w-5 shrink-0 cursor-pointer accent-[#171717] disabled:cursor-not-allowed sm:h-4 sm:w-4"
               />
 
               <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 leading-normal">
-                <strong className="text-[11px] font-bold tracking-[.3px] text-[#242424]">
-                  DOCUMENTS
-                </strong>
+                <strong className="text-xs font-semibold text-[#6B7280]">Documents</strong>
 
-                <span className="text-[10px] text-[#808080]">
+                <span className="text-xs text-[#6B7280]">
                   - {queue.length} {queue.length === 1 ? 'file' : 'files'} ·{' '}
                   {formatFileSize(totalSize)}
                 </span>
               </div>
             </div>
 
-            <strong className="hidden items-center border-l-[3px] border-[#969696] px-3.5 py-3 text-[11px] font-bold leading-normal tracking-[.3px] text-[#242424] sm:flex">
-              DOCUMENT PROFILE TYPE
+            <strong className="hidden items-center border-l border-[#E5E5E5] px-3.5 py-3 text-xs font-semibold leading-normal text-[#6B7280] sm:flex">
+              Document profile type
             </strong>
           </div>
 
@@ -665,7 +663,7 @@ export default function DocumentAnalysis() {
                 return (
                   <li
                     key={item.id}
-                    className={`${rowGrid} border-b border-[#ebebeb] bg-white last:border-b-0 sm:min-h-14 ${
+                    className={`${rowGrid} border-b border-[#E5E5E5] bg-white last:border-b-0 sm:min-h-14 ${
                       selected ? 'shadow-[inset_3px_0_0_#171717]' : ''
                     }`}
                   >
@@ -676,31 +674,31 @@ export default function DocumentAnalysis() {
                         disabled={isStarting}
                         onChange={(event) => toggleSelected(item.id, event.target.checked)}
                         aria-label={`Select ${item.name}`}
-                        className="h-5 w-5 shrink-0 cursor-pointer accent-[#111] disabled:cursor-not-allowed sm:h-4 sm:w-4"
+                        className="h-5 w-5 shrink-0 cursor-pointer accent-[#171717] disabled:cursor-not-allowed sm:h-4 sm:w-4"
                       />
 
                       <div className="flex min-w-0 items-center gap-[.75ch]">
                         <span
                           title={item.name}
-                          className="block min-w-0 truncate text-xs font-semibold"
+                          className="block min-w-0 truncate text-sm font-semibold"
                         >
                           {nameWithoutExtension(item.name)}
                         </span>
 
-                        <span className="shrink-0 whitespace-nowrap text-[10px] text-[#939393]">
+                        <span className="shrink-0 whitespace-nowrap text-xs text-[#6B7280]">
                           {extensionOf(item.name)} - {formatFileSize(item.size)}
                         </span>
                       </div>
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-2 px-3 pb-3 pt-1 sm:gap-2.5 sm:border-l-[3px] sm:border-[#969696] sm:py-2.5 sm:pl-3.5 sm:pr-3">
+                    <div className="flex min-w-0 items-center gap-2 px-3 pb-3 pt-1 sm:gap-2.5 sm:border-l sm:border-[#E5E5E5] sm:py-2.5 sm:pl-3.5 sm:pr-3">
                       <div className="min-w-0 flex-1">
                         <select
                           aria-label={`Document profile type for ${item.name}`}
                           value={item.profile}
                           disabled={isStarting}
                           onChange={(event) => updateProfile(item.id, event.target.value)}
-                          className={`${selectCls} sm:!min-h-[34px]`}
+                          className={selectCls}
                         >
                           {PROFILE_OPTIONS.map(([key, label]) => (
                             <option key={key} value={key}>
@@ -715,9 +713,9 @@ export default function DocumentAnalysis() {
                         onClick={() => removeItem(item.id)}
                         disabled={isStarting}
                         aria-label={`Remove ${item.name} from the queue`}
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded text-2xl leading-none text-[#999] enabled:hover:bg-[#fff0f0] enabled:hover:text-[#a33636] disabled:cursor-not-allowed disabled:opacity-40 sm:h-7 sm:w-6 sm:text-[22px]"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-gray-400 enabled:hover:bg-[#fff0f0] enabled:hover:text-[#a33636] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
                       >
-                        ×
+                        <X className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </li>
@@ -728,13 +726,13 @@ export default function DocumentAnalysis() {
 
           {queue.length === 0 && (
             <div className="px-4 py-7 text-center">
-              <span aria-hidden className="mb-2.5 block text-3xl text-[#aaa]">
+              <span aria-hidden className="mb-2.5 block text-3xl text-gray-400">
                 +
               </span>
 
-              <p className="mb-1.5 text-[13px] font-semibold">No documents added yet</p>
+              <p className="mb-1.5 text-sm font-semibold">No documents added yet</p>
 
-              <span className="text-[11px] text-[#808080]">
+              <span className="text-xs text-[#6B7280]">
                 Add documents above to create your analysis queue.
               </span>
             </div>
@@ -746,14 +744,14 @@ export default function DocumentAnalysis() {
             type="button"
             onClick={() => void handleStartAnalysis()}
             disabled={queue.length === 0 || isStarting}
-            className={`${btnDark} min-h-[46px] w-full max-w-[320px] px-8 py-3 text-sm sm:w-auto sm:min-w-[260px] sm:text-[13px]`}
+            className={`${btnDark} w-full max-w-[320px] sm:w-auto sm:min-w-[260px] sm:px-8`}
           >
-            {isStarting ? 'Uploading and starting analyses...' : 'Start Analyze Documents'}
+            {isStarting ? 'Uploading and starting analyses...' : 'Analyze documents'}
           </button>
         </div>
 
         {isStarting && (
-          <p role="status" aria-live="polite" className="mt-3 text-center text-xs text-[#737373]">
+          <p role="status" aria-live="polite" className="mt-3 text-center text-xs text-[#6B7280]">
             Please stay on this page until the documents have been submitted.
           </p>
         )}

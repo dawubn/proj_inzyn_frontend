@@ -186,12 +186,12 @@ export default function AnalysisHistory() {
         <div className="mt-6 h-auto rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:mt-10 sm:p-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <h2 className="whitespace-nowrap text-sm font-semibold text-[#111827]">
+              <h2 className="whitespace-nowrap text-base font-semibold text-[#111827] sm:text-lg">
                 All analyses
               </h2>
 
               <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                <div className="flex w-full min-w-0 items-center rounded-full border border-[#E5E5E5] bg-white px-3 py-2 sm:w-[280px]">
+                <div className="flex w-full min-w-0 items-center rounded-full border border-[#E5E5E5] bg-white px-3 py-2 focus-within:border-gray-400 sm:w-[280px]">
                   <input
                     type="text"
                     aria-label="Search analyses by document name, ID or status"
@@ -205,7 +205,7 @@ export default function AnalysisHistory() {
                 <button
                   type="button"
                   onClick={() => void handleRefresh()}
-                  className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] enabled:hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#E5E5E5] bg-white text-[#111827] enabled:hover:bg-[#F3F4F6] disabled:cursor-not-allowed disabled:opacity-50 sm:h-8 sm:w-8"
                   aria-label="Refresh list"
                   title="Refresh"
                   disabled={showLoading}
@@ -218,15 +218,21 @@ export default function AnalysisHistory() {
               </div>
             </div>
 
+            {isError && allAnalyses.length > 0 && (
+              <p role="alert" className="text-xs text-red-700 sm:text-sm">
+                Could not refresh analyses. Please try again.
+              </p>
+            )}
+
             {isDocumentsError && (
               <p role="alert" className="text-xs text-amber-800 sm:text-sm">
                 Could not load document details. Some document names or types may be unavailable.
               </p>
             )}
 
-            <div className="mt-2 max-h-[515px] overflow-auto rounded-2xl bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-              <div className="min-w-[860px]">
-                <div className="flex items-center rounded-t-2xl bg-[#F9FAFB] px-3 py-2 sm:px-4">
+            <div className="mt-2 max-h-[515px] overflow-auto rounded-lg border border-[#E5E5E5] bg-white">
+              <div className="sm:min-w-[860px]">
+                <div className="hidden items-center rounded-t-lg bg-[#F9FAFB] px-3 py-2 sm:flex sm:px-4">
                   <div className="min-w-[150px] flex-1">
                     <p className="text-[11px] font-semibold text-[#6B7280]">Document name</p>
                   </div>
@@ -254,15 +260,13 @@ export default function AnalysisHistory() {
                     >
                       Loading...
                     </div>
-                  ) : isError ? (
+                  ) : isError && allAnalyses.length === 0 ? (
                     <div role="alert" className="px-3 py-3 text-xs text-red-600 sm:px-4 sm:text-sm">
                       Failed to load analyses. Refresh the list to try again.
                     </div>
                   ) : filteredAnalyses.length === 0 ? (
                     <div className="px-3 py-3 text-xs text-[#737373] sm:px-4 sm:text-sm">
-                      {search.trim()
-                        ? 'No analyses match the current filters.'
-                        : 'No analyses yet.'}
+                      {search.trim() ? 'No analyses match your search.' : 'No analyses yet.'}
                     </div>
                   ) : (
                     filteredAnalyses.map((analysis) => {
@@ -302,24 +306,38 @@ export default function AnalysisHistory() {
                       return (
                         <div
                           key={analysis.id}
-                          className="flex items-center bg-[#F9FAFB] px-3 py-2 hover:bg-gray-50 sm:px-4"
+                          className={`flex items-center px-3 py-2 sm:px-4 ${
+                            viewDisabled ? 'bg-gray-50' : 'hover:bg-gray-50'
+                          }`}
                         >
                           <div className="min-w-0 flex-1 pr-3">
                             <p
                               title={title}
-                              className="truncate text-xs font-medium text-[#111827] sm:text-sm"
+                              className={`truncate text-xs font-medium sm:text-sm ${
+                                viewDisabled ? 'text-gray-500' : 'text-[#111827]'
+                              }`}
                             >
                               {title}
                             </p>
+
+                            <p
+                              className={`mt-1 text-[10px] font-semibold leading-tight sm:hidden ${statusConfig.color}`}
+                            >
+                              {statusConfig.label}
+                              <span className="text-gray-500">
+                                {' '}
+                                • {formatDate(analysis.created_at)}
+                              </span>
+                            </p>
                           </div>
 
-                          <div className="w-40 shrink-0">
+                          <div className="hidden w-40 shrink-0 sm:block">
                             <p className="text-[11px] text-[#374151] sm:text-xs">
                               {formatDate(analysis.created_at)}
                             </p>
                           </div>
 
-                          <div className="w-40 shrink-0 pr-3">
+                          <div className="hidden w-40 shrink-0 pr-3 sm:block">
                             <p
                               title={displayedDocumentType}
                               className="truncate text-[11px] text-[#374151] sm:text-xs"
@@ -328,11 +346,14 @@ export default function AnalysisHistory() {
                             </p>
                           </div>
 
-                          <div className="w-48 shrink-0 pr-2" title={statusConfig.label}>
+                          <div
+                            className="hidden w-48 shrink-0 pr-2 sm:block"
+                            title={statusConfig.label}
+                          >
                             {renderStatusBadge(analysis.status)}
                           </div>
 
-                          <div className="flex w-28 shrink-0 justify-end">
+                          <div className="flex shrink-0 justify-end pl-2 sm:w-28 sm:pl-0">
                             <span
                               title={viewTitle}
                               className={viewDisabled ? 'cursor-not-allowed' : ''}
@@ -341,7 +362,7 @@ export default function AnalysisHistory() {
                                 type="button"
                                 size="sm"
                                 disabled={viewDisabled}
-                                className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-4 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 sm:text-sm"
+                                className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-3 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 sm:px-4 sm:text-sm"
                                 onClick={() => handleOpenAnalysis(analysis)}
                                 aria-label={`${viewTitle}: ${title}`}
                               >

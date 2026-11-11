@@ -263,7 +263,7 @@ export default function DocumentProcessing() {
         ? 'border-gray-300 bg-gray-50'
         : queued
           ? 'border-amber-300 bg-white'
-          : 'border-[#dedede] bg-white';
+          : 'border-[#E5E5E5] bg-white';
 
   const currentStage = failed
     ? `Failed at: ${failedStageLabel}`
@@ -286,15 +286,15 @@ export default function DocumentProcessing() {
           : 'text-gray-900';
 
   return (
-    <div className="flex w-full items-start justify-center sm:px-4 sm:pb-10 sm:pt-12">
+    <div className="flex w-full items-start justify-center sm:px-2 lg:px-4">
       <section
         aria-labelledby="processing-title"
-        className="w-full max-w-2xl rounded-2xl border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
+        className="w-full max-w-2xl rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
       >
         <h1
           id="processing-title"
-          className={`text-center text-2xl font-bold tracking-tight sm:text-3xl ${
-            failed ? 'text-red-800' : 'text-[#171717]'
+          className={`text-center text-2xl font-semibold tracking-tight sm:text-4xl ${
+            failed ? 'text-red-800' : 'text-[#0A0A0A]'
           }`}
         >
           {failed ? 'Processing failed' : 'Processing'}
@@ -330,7 +330,7 @@ export default function DocumentProcessing() {
               variant="outline"
               disabled={isFetching}
               onClick={() => void refetchAll()}
-              className="mt-3 min-h-10 bg-white"
+              className="mt-3 h-10 rounded-lg border-gray-300 bg-white px-4 text-sm text-gray-900 hover:bg-gray-50"
             >
               {isFetching ? 'Refreshing...' : 'Refresh statuses'}
             </Button>
@@ -340,7 +340,7 @@ export default function DocumentProcessing() {
         {selectedItem && (
           <article
             aria-label={`${selectedTitle.fileName} ID ${selectedTitle.shortId}`}
-            className={`mt-6 rounded-2xl border px-4 py-4 sm:px-5 ${cardStyle}`}
+            className={`mt-6 rounded-lg border px-4 py-4 sm:px-5 ${cardStyle}`}
           >
             <div className="mb-3 min-w-0">
               <h2
@@ -407,7 +407,7 @@ export default function DocumentProcessing() {
                   value={percent}
                   aria-label={`${selectedTitle.fileName}: processing progress`}
                   className={`mt-3 h-2.5 bg-gray-200 ${
-                    completed ? '[&>div]:bg-lime-600' : '[&>div]:bg-slate-950'
+                    completed ? '[&>div]:bg-lime-600' : '[&>div]:bg-[#171717]'
                   }`}
                 />
               </>
@@ -420,7 +420,7 @@ export default function DocumentProcessing() {
                   variant="outline"
                   disabled={isCancelling}
                   onClick={() => handleCancel(selectedItem.id)}
-                  className="min-h-10 border-[#e7caca] bg-white text-[#a33636] hover:bg-[#fff3f3]"
+                  className="h-10 rounded-lg border-[#e7caca] bg-white px-4 text-sm text-[#a33636] hover:bg-[#fff3f3]"
                 >
                   {isCancelling ? 'Cancelling...' : 'Cancel'}
                 </Button>
@@ -432,9 +432,9 @@ export default function DocumentProcessing() {
                 <Button
                   type="button"
                   onClick={() => navigate(`/analysis/${selectedItem.id}`)}
-                  className="min-h-10 bg-slate-950 text-white hover:bg-slate-800"
+                  className="h-10 rounded-lg bg-[#171717] px-4 text-sm text-white hover:bg-[#2A2A2A]"
                 >
-                  See result
+                  View results
                 </Button>
               </div>
             )}
@@ -460,8 +460,10 @@ export default function DocumentProcessing() {
                   role="listitem"
                   aria-current={isSelected}
                   onClick={() => selectItem(item.id)}
-                  className={`flex w-full min-w-0 items-center gap-3 rounded-xl border-2 bg-white px-3 py-2 text-left transition-colors ${
-                    isSelected ? 'border-black' : 'border-transparent hover:border-gray-300'
+                  className={`flex w-full min-w-0 items-center gap-3 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
+                    isSelected
+                      ? 'border-[#171717] ring-1 ring-[#171717]'
+                      : 'border-[#E5E5E5] hover:border-gray-300'
                   }`}
                 >
                   <span className="w-6 shrink-0 text-sm font-semibold text-gray-500 tabular-nums">
@@ -492,7 +494,7 @@ export default function DocumentProcessing() {
             type="button"
             variant="outline"
             onClick={() => navigate('/dashboard')}
-            className="min-h-11 bg-white"
+            className="h-10 rounded-lg border-gray-300 bg-white px-4 text-sm text-gray-900 hover:bg-gray-50"
           >
             Back to dashboard
           </Button>
