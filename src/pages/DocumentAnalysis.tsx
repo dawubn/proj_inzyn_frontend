@@ -427,11 +427,11 @@ export default function DocumentAnalysis() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1120px] px-2.5 py-4 sm:px-5 sm:py-8">
+    <div className="mx-auto w-full max-w-[1120px] sm:px-5 sm:py-8">
       <section
         aria-labelledby="page-title"
         aria-busy={isStarting}
-        className="rounded-[10px] border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-6 shadow-sm sm:px-8 sm:py-7"
+        className="rounded-[10px] border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
       >
         <h1
           id="page-title"

@@ -515,7 +515,7 @@ export default function AnalysisDetails() {
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.applicable_laws as any[])?.length > 0 && (
             <Card className="border border-gray-200 shrink-0">
-              <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+              <CardContent className="p-4 sm:p-6 flex-1 flex flex-col min-h-0">
                 <div className="mb-4 flex items-center gap-3">
                   <h3 className="font-semibold text-gray-900">Applicable Laws</h3>
                   <AiBadge />
@@ -549,7 +549,7 @@ export default function AnalysisDetails() {
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {((analysis?.legal_analysis_result as any)?.summary as string) && (
             <Card className="border border-gray-200 bg-gray-50 shrink-0 max-h-40 overflow-y-auto">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="mb-4 flex items-center gap-3">
                   <h2 className="font-semibold text-gray-900">Summary</h2>
                   <AiBadge />

@@ -145,7 +145,7 @@ export function FormalValidationCard({
   };
   return (
     <Card className="border border-gray-200 bg-white shadow-none shrink-0 max-h-[28rem] flex flex-col min-h-0">
-      <CardContent className="p-6 flex flex-col min-h-0">
+      <CardContent className="p-4 sm:p-6 flex flex-col min-h-0">
         <div className="mb-4 flex items-center gap-3">
           <h2 className="font-semibold text-gray-900">Document Completeness</h2>
         </div>

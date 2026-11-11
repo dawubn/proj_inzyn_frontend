@@ -286,10 +286,10 @@ export default function DocumentProcessing() {
           : 'text-gray-900';
 
   return (
-    <div className="flex w-full items-start justify-center px-3 pb-6 pt-8 sm:px-4 sm:pb-10 sm:pt-12">
+    <div className="flex w-full items-start justify-center sm:px-4 sm:pb-10 sm:pt-12">
       <section
         aria-labelledby="processing-title"
-        className="w-full max-w-2xl rounded-2xl border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-6 shadow-sm sm:px-8 sm:py-7"
+        className="w-full max-w-2xl rounded-2xl border border-[#e0dfdc] bg-[#f5f4f1] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
       >
         <h1
           id="processing-title"

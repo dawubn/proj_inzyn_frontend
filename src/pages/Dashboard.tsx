@@ -158,7 +158,7 @@ export default function Dashboard() {
   const lastAnalysisLoading = isRedactionsLoading || isDocumentsLoading || isLastAnalysisRefreshing;
 
   return (
-    <div className="w-full max-w-full px-1 sm:px-2 lg:px-4">
+    <div className="w-full max-w-full sm:px-2 lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:p-6">
         <div className="flex flex-col gap-3 sm:gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -317,7 +317,7 @@ export default function Dashboard() {
           </section>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm sm:p-5">
+            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-5">
               <h2 className="text-lg font-semibold leading-tight text-[#111111]">
                 Documents requiring attention
               </h2>
@@ -336,7 +336,7 @@ export default function Dashboard() {
               </div>
             </section>
 
-            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm sm:p-5">
+            <section className="min-w-0 rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:p-5">
               <h2 className="text-lg font-semibold text-[#111111]">Analysis Statistics</h2>
 
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">

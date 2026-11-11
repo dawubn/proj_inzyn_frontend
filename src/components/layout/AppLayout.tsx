@@ -67,7 +67,7 @@ export default function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:min-h-0">
-      <header className="flex shrink-0 items-start justify-between px-8 py-6">
+      <header className="flex shrink-0 items-start justify-between px-4 py-4 sm:px-8 sm:py-6">
         <div>
           <h1
             onClick={() => navigate('/dashboard')}
@@ -76,7 +76,7 @@ export default function AppLayout() {
             CerberDoc
           </h1>
 
-          <div className="-ml-2 mt-10 flex items-center gap-1 text-xs text-gray-500 sm:ml-0 sm:mt-4 sm:gap-3 sm:text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-1 text-xs text-gray-500 sm:mt-4 sm:gap-3 sm:text-sm">
             {breadcrumbs.length > 1 && (
               <button
                 onClick={() => navigate(breadcrumbs[breadcrumbs.length - 2].path)}
@@ -177,7 +177,7 @@ export default function AppLayout() {
         </Sheet>
       </header>
 
-      <main className="px-8 pb-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+      <main className="px-4 pb-4 sm:px-8 sm:pb-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
         <div className="rounded-sm bg-white">
           <Outlet />
         </div>

@@ -166,7 +166,7 @@ export default function AnalysisHistory() {
   const showLoading = isLoading || isHardRefreshing;
 
   return (
-    <div className="w-full max-w-full px-1 sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
+    <div className="w-full max-w-full sm:px-2 lg:h-full lg:overflow-hidden lg:px-4">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:h-full lg:p-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold leading-tight tracking-tight text-[#0A0A0A] sm:text-4xl">
@@ -176,7 +176,7 @@ export default function AnalysisHistory() {
           <p className="text-sm text-[#6B7280]">Review of previously analyzed documents.</p>
         </div>
 
-        <div className="mt-10 h-auto rounded-lg border border-[#E5E5E5] bg-white p-4 shadow-sm">
+        <div className="mt-6 h-auto rounded-lg border border-[#E5E5E5] bg-white p-3 shadow-sm sm:mt-10 sm:p-4">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
               <h2 className="whitespace-nowrap text-sm font-semibold text-[#111827]">

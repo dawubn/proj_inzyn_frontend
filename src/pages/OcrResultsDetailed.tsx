@@ -119,11 +119,11 @@ export default function OcrResultsDetailed() {
 
   return (
     <div className="h-full bg-white flex flex-col overflow-hidden">
-      <div className="border-b border-gray-200 px-6 py-4 shrink-0">
+      <div className="border-b border-gray-200 py-4 shrink-0 sm:px-6">
         <h1 className="text-2xl font-bold text-gray-900">Extracted Text</h1>
       </div>
 
-      <div className="border-b border-gray-200 px-6 py-3 flex-shrink-0 bg-gray-50">
+      <div className="border-b border-gray-200 px-3 py-3 flex-shrink-0 bg-gray-50 sm:px-6">
         <div className="flex gap-6 text-sm">
           <div>
             <span className="text-gray-600">Pages:</span>
@@ -145,10 +145,10 @@ export default function OcrResultsDetailed() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="px-6 py-6 pb-12">
+        <div className="py-4 pb-12 sm:px-6 sm:py-6">
           {/* Full Text Card */}
           <Card className="border border-gray-200 bg-white shadow-none mb-6">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <FileText size={20} />
@@ -164,7 +164,7 @@ export default function OcrResultsDetailed() {
                   Copy
                 </Button>
               </div>
-              <div className="bg-gray-50 p-6 rounded border border-gray-300 max-h-96 overflow-y-auto">
+              <div className="bg-gray-50 p-4 rounded border border-gray-300 max-h-96 overflow-y-auto sm:p-6">
                 <p className="text-gray-800 leading-relaxed whitespace-pre-wrap font-mono text-sm">
                   {fullText || 'No text extracted'}
                 </p>
@@ -174,7 +174,7 @@ export default function OcrResultsDetailed() {
 
           {ocrResult && (
             <Card className="border border-gray-200 bg-white shadow-none mb-6">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">
                   {Array.isArray(ocrResult.pages) ? 'Page Breakdown' : 'Content Breakdown'}
                 </h2>
@@ -222,7 +222,7 @@ export default function OcrResultsDetailed() {
 
           {ocrResult && (
             <Card className="border border-gray-200 bg-white shadow-none">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Raw OCR</h2>
                 <div className="bg-gray-900 p-4 rounded border border-gray-700 max-h-96 overflow-auto">
                   <pre className="text-xs text-gray-100 font-mono whitespace-pre-wrap break-words">
