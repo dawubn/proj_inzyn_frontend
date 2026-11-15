@@ -45,6 +45,7 @@ export * from './triggerFullOcrApiV1RedactionsFullOcrPostParams';
 export * from './triggerLegalAnalysisApiV1RedactionsLegalAnalysisPostParams';
 export * from './triggerLocalOcrAsyncApiV1RedactionsLocalOcrPostParams';
 export * from './userCreate';
+export * from './userProfileUpdate';
 export * from './userResponse';
 export * from './userRole';
 export * from './validationError';

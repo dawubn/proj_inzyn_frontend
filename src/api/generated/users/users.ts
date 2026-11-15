@@ -5,20 +5,23 @@
  * REST API for document completeness analysis using OCR
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { HTTPValidationError, UserResponse } from '../model';
+import type { HTTPValidationError, UserProfileUpdate, UserResponse } from '../model';
 
 export type getMeApiV1UsersMeGetResponse200 = {
   data: UserResponse;
@@ -169,6 +172,116 @@ export function useGetMeApiV1UsersMeGet<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+export type updateMeApiV1UsersMePatchResponse200 = {
+  data: UserResponse;
+  status: 200;
+};
+
+export type updateMeApiV1UsersMePatchResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type updateMeApiV1UsersMePatchResponseSuccess = updateMeApiV1UsersMePatchResponse200 & {
+  headers: Headers;
+};
+export type updateMeApiV1UsersMePatchResponseError = updateMeApiV1UsersMePatchResponse422 & {
+  headers: Headers;
+};
+
+export type updateMeApiV1UsersMePatchResponse =
+  | updateMeApiV1UsersMePatchResponseSuccess
+  | updateMeApiV1UsersMePatchResponseError;
+
+export const getUpdateMeApiV1UsersMePatchUrl = () => {
+  return `http://localhost:8000/api/v1/users/me`;
+};
+
+/**
+ * Update the profile of the logged-in user. Only the fields sent are changed.
+ * @summary Update Me
+ */
+export const updateMeApiV1UsersMePatch = async (
+  userProfileUpdate: UserProfileUpdate,
+  options?: RequestInit,
+): Promise<updateMeApiV1UsersMePatchResponse> => {
+  const res = await fetch(getUpdateMeApiV1UsersMePatchUrl(), {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(userProfileUpdate),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateMeApiV1UsersMePatchResponse['data'] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as updateMeApiV1UsersMePatchResponse;
+};
+
+export const getUpdateMeApiV1UsersMePatchMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>,
+    TError,
+    { data: UserProfileUpdate },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>,
+  TError,
+  { data: UserProfileUpdate },
+  TContext
+> => {
+  const mutationKey = ['updateMeApiV1UsersMePatch'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>,
+    { data: UserProfileUpdate }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMeApiV1UsersMePatch(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMeApiV1UsersMePatchMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>
+>;
+export type UpdateMeApiV1UsersMePatchMutationBody = UserProfileUpdate;
+export type UpdateMeApiV1UsersMePatchMutationError = HTTPValidationError;
+
+/**
+ * @summary Update Me
+ */
+export const useUpdateMeApiV1UsersMePatch = <TError = HTTPValidationError, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>,
+      TError,
+      { data: UserProfileUpdate },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateMeApiV1UsersMePatch>>,
+  TError,
+  { data: UserProfileUpdate },
+  TContext
+> => {
+  return useMutation(getUpdateMeApiV1UsersMePatchMutationOptions(options), queryClient);
+};
 export type getUserApiV1UsersUserIdGetResponse200 = {
   data: UserResponse;
   status: 200;
