@@ -1638,6 +1638,147 @@
                     }
                 }
             }
+        },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Forgot Password",
+                "description": "Send a password reset link to the given email.\n\nThe response is the same whether or not an account with this email exists,\nso the endpoint cannot be used to check which emails are registered.",
+                "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset Password",
+                "description": "Set a new password using the token from the reset link.\n\nThe link works once. All existing sessions of the user stop working,\nand the session cookies of this browser are cleared.",
+                "operationId": "reset_password_api_v1_auth_reset_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "400": {
+                        "description": "Reset link is invalid, already used or expired"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/me/password": {
+            "post": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Change My Password",
+                "description": "Change the password of the logged-in user.\n\nAll other sessions of the user stop working. This session continues:\nnew tokens are set in the cookies.",
+                "operationId": "change_my_password_api_v1_users_me_password_post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "access_token",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Access Token"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "400": {
+                        "description": "Current password is incorrect"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -2937,6 +3078,74 @@
                 "type": "object",
                 "title": "UserProfileUpdate",
                 "description": "Fields a user can change on their own account. Omitted fields stay unchanged."
+            },
+            "ForgotPasswordRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "ForgotPasswordRequest"
+            },
+            "ResetPasswordRequest": {
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "New Password"
+                    },
+                    "token": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "title": "Token"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "new_password",
+                    "token"
+                ],
+                "title": "ResetPasswordRequest"
+            },
+            "MessageResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "message"
+                ],
+                "title": "MessageResponse"
+            },
+            "ChangePasswordRequest": {
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "New Password"
+                    },
+                    "current_password": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Current Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "new_password",
+                    "current_password"
+                ],
+                "title": "ChangePasswordRequest"
             }
         },
         "securitySchemes": {
