@@ -2469,10 +2469,6 @@
                             }
                         ],
                         "title": "Company"
-                    },
-                    "role": {
-                        "$ref": "#/components/schemas/UserRole",
-                        "default": "business_user"
                     }
                 },
                 "type": "object",
@@ -2482,7 +2478,8 @@
                     "name",
                     "surname"
                 ],
-                "title": "UserCreate"
+                "title": "UserCreate",
+                "description": "Registration data. The role is not part of it: new accounts are always regular users."
             },
             "UserResponse": {
                 "properties": {
@@ -2562,7 +2559,7 @@
                 "type": "string",
                 "enum": [
                     "admin",
-                    "business_user"
+                    "user"
                 ],
                 "title": "UserRole"
             },
