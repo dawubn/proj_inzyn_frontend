@@ -15,6 +15,12 @@ export interface UserCreate {
    * @minLength 1
    * @maxLength 255
    */
-  full_name: string;
+  name: string;
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  surname: string;
+  company?: string | null;
   role?: UserRole;
 }

@@ -2382,11 +2382,30 @@
                         "minLength": 8,
                         "title": "Password"
                     },
-                    "full_name": {
+                    "name": {
                         "type": "string",
                         "maxLength": 255,
                         "minLength": 1,
-                        "title": "Full Name"
+                        "title": "Name"
+                    },
+                    "surname": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "title": "Surname"
+                    },
+                    "company": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255,
+                                "minLength": 1
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Company"
                     },
                     "role": {
                         "$ref": "#/components/schemas/UserRole",
@@ -2397,7 +2416,8 @@
                 "required": [
                     "email",
                     "password",
-                    "full_name"
+                    "name",
+                    "surname"
                 ],
                 "title": "UserCreate"
             },
@@ -2422,9 +2442,31 @@
                         "type": "string",
                         "title": "Email"
                     },
-                    "full_name": {
+                    "name": {
                         "type": "string",
-                        "title": "Full Name"
+                        "title": "Name"
+                    },
+                    "surname": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Surname"
+                    },
+                    "company": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Company"
                     },
                     "role": {
                         "$ref": "#/components/schemas/UserRole"
@@ -2444,7 +2486,9 @@
                     "updated_at",
                     "id",
                     "email",
-                    "full_name",
+                    "name",
+                    "surname",
+                    "company",
                     "role",
                     "is_active",
                     "is_verified"

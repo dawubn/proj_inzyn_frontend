@@ -30,7 +30,7 @@ export default function Dashboard() {
 
   const [isLastAnalysisRefreshing, setIsLastAnalysisRefreshing] = useState(false);
 
-  const userName = user?.full_name?.trim() || user?.email || '';
+  const userName = user?.name?.trim() || user?.email || '';
 
   const {
     data: allAnalysesRaw,

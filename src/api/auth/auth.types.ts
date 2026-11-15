@@ -11,14 +11,18 @@ export interface LoginPayload {
 export interface RegisterPayload {
   email: string;
   password: string;
-  fullname: string;
+  name: string;
+  surname: string;
+  company?: string | null;
   role: UserRole;
 }
 
 export interface UserResponse {
   id: string;
   email: string;
-  full_name: string;
+  name: string;
+  surname: string | null;
+  company: string | null;
   role: UserRole;
   isactive: boolean;
   isverified: boolean;
