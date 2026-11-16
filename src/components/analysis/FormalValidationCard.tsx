@@ -16,6 +16,7 @@ const statusLabels: Record<string, string> = {
   incomplete: 'Some information needs your attention.',
   indeterminate: 'Some items need a manual review.',
   unsupported: 'Checks are not yet available for this document type.',
+  type_required: 'Confirm the document type and run the analysis again to check completeness.',
 };
 function CheckResult({
   check,
@@ -162,7 +163,7 @@ export function FormalValidationCard({
                 <p className="text-sm text-gray-600">
                   {statusLabels[summary.validation_status ?? ''] ?? 'Results are unavailable.'}
                 </p>
-                {summary.validation_status !== 'unsupported' && (
+                {!['unsupported', 'type_required'].includes(summary.validation_status ?? '') && (
                   <p className="mt-1 text-xs text-gray-500">
                     Needs attention: {rows.filter(({ check }) => check.outcome === 'fail').length}
                     {' · '}Review:{' '}
