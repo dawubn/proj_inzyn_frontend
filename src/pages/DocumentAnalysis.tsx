@@ -6,6 +6,8 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { FolderOpen, Upload, X } from 'lucide-react';
 
 import { formatFileSize } from '@/lib/formatters';
+import AnalysisSettingsPanel from '@/features/analysis/AnalysisSettingsPanel';
+import { useAnalysisSettings } from '@/hooks/analysis/useAnalysisSettings';
 import { processingUrl } from '@/lib/analysisStatus';
 import {
   DOCUMENT_TYPE_LABELS,
@@ -72,6 +74,7 @@ export default function DocumentAnalysis() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isStarting, setIsStarting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const analysisSettings = useAnalysisSettings();
 
   const selectAllRef = useRef<HTMLInputElement | null>(null);
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -341,6 +344,14 @@ export default function DocumentAnalysis() {
       return;
     }
 
+    if (analysisSettings.error) {
+      setErrorMessage(analysisSettings.error);
+      return;
+    }
+
+    const startOptions = analysisSettings.startOptions;
+    const start = (id: string) => startDocumentAnalysis(id, startOptions);
+
     startingRef.current = true;
     setIsStarting(true);
     setErrorMessage('');
@@ -372,10 +383,10 @@ export default function DocumentAnalysis() {
         }
 
         const analysis = isNewUpload
-          ? await startDocumentAnalysis(documentId)
+          ? await start(documentId)
           : await reanalyzeDocument(documentId, item.profile, {
               updateType: patchDocumentType,
-              start: startDocumentAnalysis,
+              start,
             });
 
         startedIds.push(analysis.id);
@@ -739,11 +750,21 @@ export default function DocumentAnalysis() {
           )}
         </section>
 
+        <div className="mt-2.5">
+          <AnalysisSettingsPanel
+            settings={analysisSettings.settings}
+            onChange={analysisSettings.setSettings}
+            available={analysisSettings.available}
+            isLoading={analysisSettings.isLoading}
+            disabled={isStarting}
+          />
+        </div>
+
         <div className="mt-4 flex justify-center">
           <button
             type="button"
             onClick={() => void handleStartAnalysis()}
-            disabled={queue.length === 0 || isStarting}
+            disabled={queue.length === 0 || isStarting || Boolean(analysisSettings.error)}
             className={`${btnDark} w-full max-w-[320px] sm:w-auto sm:min-w-[260px] sm:px-8`}
           >
             {isStarting ? 'Uploading and starting analyses...' : 'Analyze documents'}

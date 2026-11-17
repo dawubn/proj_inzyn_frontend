@@ -190,6 +190,69 @@
                         }
                     }
                 }
+            },
+            "patch": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update Me",
+                "description": "Update the profile of the logged-in user. Only the fields sent are changed.",
+                "operationId": "update_me_api_v1_users_me_patch",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "access_token",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Access Token"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UserProfileUpdate"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/api/v1/users/{user_id}": {
@@ -1088,7 +1151,7 @@
                     "redactions"
                 ],
                 "summary": "Trigger Legal Analysis",
-                "description": "Trigger full OCR pipeline with legal analysis.\n\nPipeline: local OCR → redaction → Azure OCR → LLM legal analysis.\n\nAccepts either:\n- document_id: existing document ID\n- file: upload file to process\n\nReturns immediately (HTTP 202) while processing happens in background.\nResults include: document summary, errors/issues, and applicable laws.",
+                "description": "Queue local OCR, redaction, Azure OCR and legal processing.\n\nWithout the option parameters the full pipeline runs: all kinds of personal data\nare masked and the legal analysis uses the default AI model.",
                 "operationId": "trigger_legal_analysis_api_v1_redactions_legal_analysis_post",
                 "security": [
                     {
@@ -1112,6 +1175,69 @@
                             ],
                             "title": "Document Id"
                         }
+                    },
+                    {
+                        "name": "anonymize",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "description": "Mask personal data before the document is sent on",
+                            "default": true,
+                            "title": "Anonymize"
+                        },
+                        "description": "Mask personal data before the document is sent on"
+                    },
+                    {
+                        "name": "redaction_categories",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RedactionCategory"
+                                    }
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "Kinds of personal data to mask; all kinds when omitted",
+                            "title": "Redaction Categories"
+                        },
+                        "description": "Kinds of personal data to mask; all kinds when omitted"
+                    },
+                    {
+                        "name": "ai_analysis",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "description": "Run the legal analysis with the AI model",
+                            "default": true,
+                            "title": "Ai Analysis"
+                        },
+                        "description": "Run the legal analysis with the AI model"
+                    },
+                    {
+                        "name": "ai_model",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "description": "AI model for the legal analysis; the default one when omitted",
+                            "title": "Ai Model"
+                        },
+                        "description": "AI model for the legal analysis; the default one when omitted"
                     },
                     {
                         "name": "access_token",
@@ -1575,6 +1701,205 @@
                     }
                 }
             }
+        },
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Forgot Password",
+                "description": "Send a password reset link to the given email.\n\nThe response is the same whether or not an account with this email exists,\nso the endpoint cannot be used to check which emails are registered.",
+                "operationId": "forgot_password_api_v1_auth_forgot_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ForgotPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset Password",
+                "description": "Set a new password using the token from the reset link.\n\nThe link works once. All existing sessions of the user stop working,\nand the session cookies of this browser are cleared.",
+                "operationId": "reset_password_api_v1_auth_reset_password_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "400": {
+                        "description": "Reset link is invalid, already used or expired"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/users/me/password": {
+            "post": {
+                "tags": [
+                    "users"
+                ],
+                "summary": "Change My Password",
+                "description": "Change the password of the logged-in user.\n\nAll other sessions of the user stop working. This session continues:\nnew tokens are set in the cookies.",
+                "operationId": "change_my_password_api_v1_users_me_password_post",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "access_token",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Access Token"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "400": {
+                        "description": "Current password is incorrect"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/redactions/options": {
+            "get": {
+                "tags": [
+                    "redactions"
+                ],
+                "summary": "Get Analysis Options",
+                "description": "Describe what can be configured when an analysis is started.",
+                "operationId": "get_analysis_options_api_v1_redactions_options_get",
+                "security": [
+                    {
+                        "HTTPBearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "name": "access_token",
+                        "in": "cookie",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Access Token"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AnalysisOptionsResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - missing or invalid access token"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -1945,6 +2270,10 @@
                         "type": "object",
                         "title": "Irregularities Count",
                         "readOnly": true
+                    },
+                    "options": {
+                        "$ref": "#/components/schemas/AnalysisOptions",
+                        "readOnly": true
                     }
                 },
                 "type": "object",
@@ -1963,7 +2292,8 @@
                     "classification_confidence",
                     "error_message",
                     "tesseract_words",
-                    "irregularities_count"
+                    "irregularities_count",
+                    "options"
                 ],
                 "title": "DocumentAnalysisListResponse",
                 "description": "Lightweight response for listing analyses (without raw results)."
@@ -2117,6 +2447,10 @@
                         "type": "object",
                         "title": "Irregularities Count",
                         "readOnly": true
+                    },
+                    "options": {
+                        "$ref": "#/components/schemas/AnalysisOptions",
+                        "readOnly": true
                     }
                 },
                 "type": "object",
@@ -2137,7 +2471,8 @@
                     "tesseract_words",
                     "ocr_raw_result",
                     "extracted_fields",
-                    "irregularities_count"
+                    "irregularities_count",
+                    "options"
                 ],
                 "title": "DocumentAnalysisResponse",
                 "description": "Full response with detailed results (for detail endpoint)."
@@ -2406,10 +2741,6 @@
                             }
                         ],
                         "title": "Company"
-                    },
-                    "role": {
-                        "$ref": "#/components/schemas/UserRole",
-                        "default": "business_user"
                     }
                 },
                 "type": "object",
@@ -2419,7 +2750,8 @@
                     "name",
                     "surname"
                 ],
-                "title": "UserCreate"
+                "title": "UserCreate",
+                "description": "Registration data. The role is not part of it: new accounts are always regular users."
             },
             "UserResponse": {
                 "properties": {
@@ -2499,7 +2831,7 @@
                 "type": "string",
                 "enum": [
                     "admin",
-                    "business_user"
+                    "user"
                 ],
                 "title": "UserRole"
             },
@@ -2830,6 +3162,334 @@
                     "info"
                 ],
                 "title": "ValidationSeverity"
+            },
+            "UserProfileUpdate": {
+                "properties": {
+                    "name": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255,
+                                "minLength": 1
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Name"
+                    },
+                    "surname": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255,
+                                "minLength": 1
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Surname"
+                    },
+                    "company": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "maxLength": 255,
+                                "minLength": 1
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Company"
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "title": "UserProfileUpdate",
+                "description": "Fields a user can change on their own account. Omitted fields stay unchanged."
+            },
+            "ForgotPasswordRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "ForgotPasswordRequest"
+            },
+            "ResetPasswordRequest": {
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "New Password"
+                    },
+                    "token": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "title": "Token"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "new_password",
+                    "token"
+                ],
+                "title": "ResetPasswordRequest"
+            },
+            "MessageResponse": {
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "message"
+                ],
+                "title": "MessageResponse"
+            },
+            "ChangePasswordRequest": {
+                "properties": {
+                    "new_password": {
+                        "type": "string",
+                        "minLength": 8,
+                        "title": "New Password"
+                    },
+                    "current_password": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Current Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "new_password",
+                    "current_password"
+                ],
+                "title": "ChangePasswordRequest"
+            },
+            "AnalysisOptions": {
+                "properties": {
+                    "anonymization_enabled": {
+                        "type": "boolean",
+                        "title": "Anonymization Enabled",
+                        "default": true
+                    },
+                    "redaction_categories": {
+                        "items": {
+                            "$ref": "#/components/schemas/RedactionCategory"
+                        },
+                        "type": "array",
+                        "title": "Redaction Categories"
+                    },
+                    "ai_analysis_enabled": {
+                        "type": "boolean",
+                        "title": "Ai Analysis Enabled",
+                        "default": true
+                    },
+                    "ai_model": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Ai Model"
+                    }
+                },
+                "type": "object",
+                "title": "AnalysisOptions",
+                "description": "How a single analysis should be run. The defaults give the full pipeline."
+            },
+            "AnalysisOptionsResponse": {
+                "properties": {
+                    "redaction_categories": {
+                        "items": {
+                            "$ref": "#/components/schemas/RedactionCategory"
+                        },
+                        "type": "array",
+                        "title": "Redaction Categories"
+                    },
+                    "ai_analysis_available": {
+                        "type": "boolean",
+                        "title": "Ai Analysis Available"
+                    },
+                    "ai_models": {
+                        "items": {
+                            "$ref": "#/components/schemas/AiModelOption"
+                        },
+                        "type": "array",
+                        "title": "Ai Models"
+                    },
+                    "default_ai_model": {
+                        "type": "string",
+                        "title": "Default Ai Model"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "redaction_categories",
+                    "ai_analysis_available",
+                    "ai_models",
+                    "default_ai_model"
+                ],
+                "title": "AnalysisOptionsResponse",
+                "description": "What can be configured for an analysis, used to build the settings panel."
+            },
+            "RedactionCategory": {
+                "type": "string",
+                "enum": [
+                    "person",
+                    "address",
+                    "date",
+                    "pesel",
+                    "email",
+                    "phone"
+                ],
+                "title": "RedactionCategory"
+            },
+            "AiModelOption": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "recommended": {
+                        "type": "boolean",
+                        "title": "Recommended",
+                        "default": false
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "cost": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/CostLevel"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "speed": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/SpeedLevel"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "quality": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/QualityLevel"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "test_result": {
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/AiModelTestResult"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "title": "AiModelOption",
+                "description": "A model that can be picked, with what is known about its cost and quality."
+            },
+            "AiModelTestResult": {
+                "properties": {
+                    "document": {
+                        "type": "string",
+                        "title": "Document"
+                    },
+                    "issues_found": {
+                        "type": "string",
+                        "title": "Issues Found"
+                    },
+                    "issues_total": {
+                        "type": "integer",
+                        "title": "Issues Total"
+                    },
+                    "cost_usd": {
+                        "type": "number",
+                        "title": "Cost Usd"
+                    },
+                    "seconds": {
+                        "type": "integer",
+                        "title": "Seconds"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "document",
+                    "issues_found",
+                    "issues_total",
+                    "cost_usd",
+                    "seconds"
+                ],
+                "title": "AiModelTestResult",
+                "description": "How the model did on the comparison document."
+            },
+            "CostLevel": {
+                "type": "string",
+                "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                ],
+                "title": "CostLevel"
+            },
+            "SpeedLevel": {
+                "type": "string",
+                "enum": [
+                    "fast",
+                    "medium",
+                    "slow"
+                ],
+                "title": "SpeedLevel"
+            },
+            "QualityLevel": {
+                "type": "string",
+                "enum": [
+                    "basic",
+                    "good",
+                    "best"
+                ],
+                "title": "QualityLevel"
             }
         },
         "securitySchemes": {

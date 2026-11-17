@@ -126,9 +126,9 @@ export default function Home() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-4">
                     <Label htmlFor="password">Password</Label>
-                    <a href="#" className="text-sm text-gray-500 hover:text-black">
+                    <Link to="/forgot-password" className="text-sm text-gray-500 hover:text-black">
                       Forgot your password?
-                    </a>
+                    </Link>
                   </div>
 
                   <Input
