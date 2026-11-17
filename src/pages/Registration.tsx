@@ -49,7 +49,6 @@ export default function Register() {
         name: name.trim(),
         surname: surname.trim(),
         company: company.trim() || null,
-        role: 'business_user',
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any;
 

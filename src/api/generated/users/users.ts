@@ -21,7 +21,12 @@ import type {
   UseQueryResult,
 } from '@tanstack/react-query';
 
-import type { HTTPValidationError, UserProfileUpdate, UserResponse } from '../model';
+import type {
+  ChangePasswordRequest,
+  HTTPValidationError,
+  UserProfileUpdate,
+  UserResponse,
+} from '../model';
 
 export type getMeApiV1UsersMeGetResponse200 = {
   data: UserResponse;
@@ -444,3 +449,138 @@ export function useGetUserApiV1UsersUserIdGet<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+export type changeMyPasswordApiV1UsersMePasswordPostResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type changeMyPasswordApiV1UsersMePasswordPostResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type changeMyPasswordApiV1UsersMePasswordPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type changeMyPasswordApiV1UsersMePasswordPostResponseSuccess =
+  changeMyPasswordApiV1UsersMePasswordPostResponse204 & {
+    headers: Headers;
+  };
+export type changeMyPasswordApiV1UsersMePasswordPostResponseError = (
+  | changeMyPasswordApiV1UsersMePasswordPostResponse400
+  | changeMyPasswordApiV1UsersMePasswordPostResponse422
+) & {
+  headers: Headers;
+};
+
+export type changeMyPasswordApiV1UsersMePasswordPostResponse =
+  | changeMyPasswordApiV1UsersMePasswordPostResponseSuccess
+  | changeMyPasswordApiV1UsersMePasswordPostResponseError;
+
+export const getChangeMyPasswordApiV1UsersMePasswordPostUrl = () => {
+  return `http://localhost:8000/api/v1/users/me/password`;
+};
+
+/**
+ * Change the password of the logged-in user.
+ *
+ * All other sessions of the user stop working. This session continues:
+ * new tokens are set in the cookies.
+ * @summary Change My Password
+ */
+export const changeMyPasswordApiV1UsersMePasswordPost = async (
+  changePasswordRequest: ChangePasswordRequest,
+  options?: RequestInit,
+): Promise<changeMyPasswordApiV1UsersMePasswordPostResponse> => {
+  const res = await fetch(getChangeMyPasswordApiV1UsersMePasswordPostUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(changePasswordRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: changeMyPasswordApiV1UsersMePasswordPostResponse['data'] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as changeMyPasswordApiV1UsersMePasswordPostResponse;
+};
+
+export const getChangeMyPasswordApiV1UsersMePasswordPostMutationOptions = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>,
+    TError,
+    { data: ChangePasswordRequest },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>,
+  TError,
+  { data: ChangePasswordRequest },
+  TContext
+> => {
+  const mutationKey = ['changeMyPasswordApiV1UsersMePasswordPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>,
+    { data: ChangePasswordRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return changeMyPasswordApiV1UsersMePasswordPost(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeMyPasswordApiV1UsersMePasswordPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>
+>;
+export type ChangeMyPasswordApiV1UsersMePasswordPostMutationBody = ChangePasswordRequest;
+export type ChangeMyPasswordApiV1UsersMePasswordPostMutationError = void | HTTPValidationError;
+
+/**
+ * @summary Change My Password
+ */
+export const useChangeMyPasswordApiV1UsersMePasswordPost = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>,
+      TError,
+      { data: ChangePasswordRequest },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeMyPasswordApiV1UsersMePasswordPost>>,
+  TError,
+  { data: ChangePasswordRequest },
+  TContext
+> => {
+  return useMutation(
+    getChangeMyPasswordApiV1UsersMePasswordPostMutationOptions(options),
+    queryClient,
+  );
+};
