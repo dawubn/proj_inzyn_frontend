@@ -5,7 +5,24 @@
  * REST API for document completeness analysis using OCR
  * OpenAPI spec version: 0.1.0
  */
+import type { RedactionCategory } from './redactionCategory';
 
 export type TriggerLegalAnalysisApiV1RedactionsLegalAnalysisPostParams = {
   document_id?: string | null;
+  /**
+   * Mask personal data before the document is sent on
+   */
+  anonymize?: boolean;
+  /**
+   * Kinds of personal data to mask; all kinds when omitted
+   */
+  redaction_categories?: RedactionCategory[] | null;
+  /**
+   * Run the legal analysis with the AI model
+   */
+  ai_analysis?: boolean;
+  /**
+   * AI model for the legal analysis; the default one when omitted
+   */
+  ai_model?: string | null;
 };
