@@ -22,7 +22,12 @@ export function formalToViewerIssue(issue: ValidationIssue): ViewerIssue {
     issue: displayMessage(normalized),
     outcome: normalized.outcome,
     text_reference: '',
-    severity: issue.severity,
+    severity:
+      normalized.outcome === 'fail'
+        ? 'error'
+        : ['unknown', 'error'].includes(normalized.outcome)
+          ? 'warning'
+          : issue.severity,
     page: location?.page ?? null,
     locations: location?.rects.length
       ? [{ page: location.page, rects: location.rects }]
