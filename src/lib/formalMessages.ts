@@ -4,8 +4,8 @@ export type FormalOutcome = 'pass' | 'fail' | 'unknown' | 'not_applicable' | 'er
 
 export const outcomeLabels: Record<FormalOutcome, string> = {
   pass: 'Passed',
-  fail: 'Needs attention',
-  unknown: 'Review',
+  fail: 'Issue found',
+  unknown: 'Manual review',
   not_applicable: 'Not required',
   error: 'Unavailable',
 };
@@ -74,6 +74,8 @@ const reasonMessages: Record<string, string> = {
   LEGACY_EXTRACTION: 'Uruchom analizę ponownie, aby sprawdzić ten element.',
   ATTACHMENT_CONTENT_UNVERIFIED: 'Sprawdź, czy dołączono wszystkie wymienione załączniki.',
   UNSUPPORTED_PROFILE: 'Nie sprawdzamy jeszcze tego rodzaju dokumentów.',
+  DOCUMENT_TYPE_UNCERTAIN:
+    'Nie udało się pewnie ustalić rodzaju dokumentu. Wybierz jego typ i uruchom analizę ponownie.',
   NO_ATTACHMENT_REQUIREMENT: 'Nie znaleziono informacji o wymaganych załącznikach.',
   INVALID_RULE_CONFIG: 'Nie udało się sprawdzić tego elementu. Spróbuj ponownie później.',
   UNKNOWN_RULE_TYPE: 'Nie udało się sprawdzić tego elementu. Spróbuj ponownie później.',
