@@ -3,12 +3,15 @@ import { useEffect } from 'react';
 
 import Home from './pages/Home';
 import Register from './pages/Registration';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import DocumentProcessing from './pages/DocumentProcessing';
 import AnalysisDetails from './pages/AnalysisDetails';
 import OcrResults from './pages/OcrResultsDetailed';
 import AnalysisHistory from '@/pages/AnalysisHistory';
+import AccountDetails from '@/pages/AccountDetails';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
@@ -42,6 +45,8 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Test route */}
         <Route path="/test" element={<h1>TEST</h1>} />
@@ -64,7 +69,7 @@ function App() {
 
           <Route path="/rule-profiles" element={<div>Rule profiles</div>} />
 
-          <Route path="/account-details" element={<div>Account details</div>} />
+          <Route path="/account-details" element={<AccountDetails />} />
 
           <Route path="/analysis/:analysisId" element={<AnalysisDetails />} />
 

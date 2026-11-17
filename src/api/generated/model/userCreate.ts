@@ -5,8 +5,10 @@
  * REST API for document completeness analysis using OCR
  * OpenAPI spec version: 0.1.0
  */
-import type { UserRole } from './userRole';
 
+/**
+ * Registration data. The role is not part of it: new accounts are always regular users.
+ */
 export interface UserCreate {
   email: string;
   /** @minLength 8 */
@@ -15,6 +17,11 @@ export interface UserCreate {
    * @minLength 1
    * @maxLength 255
    */
-  full_name: string;
-  role?: UserRole;
+  name: string;
+  /**
+   * @minLength 1
+   * @maxLength 255
+   */
+  surname: string;
+  company?: string | null;
 }

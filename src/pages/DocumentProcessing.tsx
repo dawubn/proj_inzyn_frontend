@@ -1,27 +1,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchAllDocuments, getDocumentTypeLabel } from '@/api/documents-wrapper';
+import { fetchAllDocuments } from '@/api/documents-wrapper';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 import type { DocumentResponse } from '@/api/generated/model';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { ProcessingHero } from '@/features/processing/ProcessingHero';
+import { QueueCard } from '@/features/processing/QueueCard';
+import { pickHeroId } from '@/features/processing/processingModel';
 import { useAnalysisTracking } from '@/hooks/analysis/useAnalysisTracking';
 import { useCancelAnalysis } from '@/hooks/analysis/useCancelAnalysis';
+import { useMediaQuery, REDUCED_MOTION_QUERY } from '@/hooks/useMediaQuery';
 import {
-  getAnalysisStatusConfig,
-  getProgressPercent,
-  getStageLabel,
-  getStatusLabel,
+  isActiveStatus,
   isCancellableStatus,
-  isCancelledStatus,
   isCompletedStatus,
-  isFailedStatus,
   isFinishedStatus,
   isQueuedStatus,
   parseProcessingIds,
 } from '@/lib/analysisStatus';
+
+// How long a finished analysis stays on top before the next one moves up or results open
+const FINISHED_HOLD_MS = 1600;
+
+const transitionName = (analysisId: string) => `processing-${analysisId}`;
 
 type ListAnalysis = DashboardAnalysis & { queue_position?: number | null };
 type OrderKey = [number, number, number];
@@ -175,27 +179,106 @@ export default function DocumentProcessing() {
     (item) => !!item.data?.document_id && !documentMap.has(item.data.document_id),
   );
 
-  const activeId =
-    selectedParam && knownIds.includes(selectedParam) ? selectedParam : (ids[0] ?? null);
-  const selectedItem = items.find((item) => item.id === activeId) ?? null;
+  const statusOf = (id: string | null) =>
+    id
+      ? (items.find((item) => item.id === id)?.data?.status ?? listMap.get(id)?.status)
+      : undefined;
 
-  // The selected analysis lives in the URL so the breadcrumb can show its file name
-  function selectItem(id: string) {
+  // Analysis shown on top: starts with the one opened, then follows the processing order
+  const [heroId, setHeroId] = useState<string | null>(() => selectedParam || ids[0] || null);
+  // Set when the user clicks a queue card; that analysis then stays on top
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
+  // The analysis leaving the top during a transition: it fades out instead of flying across the list
+  const [leavingId, setLeavingId] = useState<string | null>(null);
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY);
+
+  const candidates = items.map((item) => ({
+    id: item.id,
+    status: item.data?.status ?? listMap.get(item.id)?.status,
+  }));
+  const nextHeroId = pickHeroId(candidates, heroId, pinnedId);
+
+  // Analyses seen while still unfinished: their completion is worth a moment on screen
+  const seenActiveRef = useRef(new Set<string>());
+  useEffect(() => {
+    candidates.forEach((item) => {
+      if (isActiveStatus(item.status)) seenActiveRef.current.add(item.id);
+    });
+  });
+
+  /** Changes the analysis on top; the cards morph into each other where supported. */
+  function showOnTop(id: string) {
+    if (!heroId || reducedMotion || typeof document.startViewTransition !== 'function') {
+      setHeroId(id);
+      return;
+    }
+    const transition = document.startViewTransition(() =>
+      flushSync(() => {
+        setLeavingId(heroId);
+        setHeroId(id);
+      }),
+    );
+    void transition.finished.finally(() => setLeavingId(null));
+  }
+
+  const heroJustFinished =
+    !!heroId && seenActiveRef.current.has(heroId) && isFinishedStatus(statusOf(heroId));
+
+  // Depends only on what changes the decision, so status polling does not restart the wait
+  useEffect(() => {
+    if (!nextHeroId || nextHeroId === heroId) return;
+    const timer = window.setTimeout(
+      () => showOnTop(nextHeroId),
+      heroJustFinished ? FINISHED_HOLD_MS : 0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [nextHeroId, heroId, heroJustFinished]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The analysis on top lives in the URL so the breadcrumb can show its file name
+  useEffect(() => {
+    if (!heroId || heroId === selectedParam) return;
     setSearchParams(
       (previous) => {
         const next = new URLSearchParams(previous);
-        next.set('selected', id);
+        next.set('selected', heroId);
         return next;
       },
       { replace: true },
     );
+  }, [heroId, selectedParam, setSearchParams]);
+
+  function selectFromQueue(id: string) {
+    setPinnedId(id);
+    showOnTop(id);
   }
 
-  function getTitle(documentId: string | undefined, analysisId: string) {
-    const fileName = documentId
+  // A single analysis opens its results once it completes, as before
+  const onlyAnalysis = knownIds.length === 1 ? knownIds[0] : null;
+  const openingResults =
+    !!onlyAnalysis &&
+    onlyAnalysis === heroId &&
+    isCompletedStatus(statusOf(onlyAnalysis)) &&
+    seenActiveRef.current.has(onlyAnalysis);
+
+  useEffect(() => {
+    if (!openingResults || !onlyAnalysis) return;
+    const timer = window.setTimeout(
+      () => navigate(`/analysis/${onlyAnalysis}`, { replace: true }),
+      FINISHED_HOLD_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [openingResults, onlyAnalysis, navigate]);
+
+  function getFileName(documentId: string | undefined) {
+    return documentId
       ? (documentMap.get(documentId)?.original_filename ?? 'Document name unavailable')
       : 'Document name unavailable';
-    return { fileName, shortId: analysisId.slice(0, 8) };
+  }
+
+  function getQueuePosition(id: string, data: unknown): number | null {
+    const fromList = listMap.get(id)?.queue_position;
+    const fromDetail = (data as { queue_position?: number | null } | undefined)?.queue_position;
+    return fromList ?? fromDetail ?? null;
   }
 
   useEffect(() => {
@@ -231,74 +314,31 @@ export default function DocumentProcessing() {
     return null;
   }
 
-  const analysis = selectedItem?.data;
-  const failed = isFailedStatus(analysis?.status);
-  const completed = isCompletedStatus(analysis?.status);
-  const queued = isQueuedStatus(analysis?.status);
-  const cancelled = isCancelledStatus(analysis?.status);
-  const cancellable = !!analysis && isCancellableStatus(analysis.status);
-  const isCancelling =
-    !!selectedItem && cancelMutation.isPending && cancelMutation.variables === selectedItem.id;
-  const percent = getProgressPercent(analysis);
+  const hero = items.find((item) => item.id === heroId) ?? null;
+  const others = items.filter((item) => item.id !== heroId);
+  const upNext = others.filter((item) => !isFinishedStatus(statusOf(item.id)));
+  const finished = others.filter((item) => isFinishedStatus(statusOf(item.id)));
 
-  const stageLabel = getStatusLabel(analysis?.status, analysis?.processing_stage);
-  const failedStageLabel = getStageLabel(analysis?.processing_stage);
-  const detectedType = analysis?.detected_document_type;
-  const confidence = analysis?.classification_confidence;
-  const showDetectedType = !!detectedType && detectedType !== 'unknown';
-
-  // A failed analysis (anything interrupted by an error, except a manual cancel)
-  // is shown on its own, without the queue list.
-  const showQueueList = items.length > 1 && !failed;
-
-  const selectedTitle = selectedItem
-    ? getTitle(analysis?.document_id, selectedItem.id)
-    : { fileName: '', shortId: '' };
-
-  const cardStyle = failed
-    ? 'border-red-300 bg-red-50'
-    : completed
-      ? 'border-lime-300 bg-white'
-      : cancelled
-        ? 'border-gray-300 bg-gray-50'
-        : queued
-          ? 'border-amber-300 bg-white'
-          : 'border-[#E5E5E5] bg-white';
-
-  const currentStage = failed
-    ? `Failed at: ${failedStageLabel}`
-    : completed
-      ? 'Completed'
-      : !analysis && selectedItem?.isError
-        ? 'Status unavailable'
-        : !analysis
-          ? 'Loading current status...'
-          : stageLabel;
-
-  const stageColor = failed
-    ? 'text-red-800'
-    : completed
-      ? 'text-lime-700'
-      : cancelled
-        ? 'text-gray-600'
-        : queued
-          ? 'text-amber-700'
-          : 'text-gray-900';
+  const renderCards = (list: typeof items) => (
+    <ul className="space-y-2">
+      {list.map((item) => (
+        <QueueCard
+          key={item.id}
+          analysis={item.data}
+          analysisId={item.id}
+          fileName={getFileName(item.data?.document_id)}
+          queuePosition={getQueuePosition(item.id, item.data)}
+          onSelect={() => selectFromQueue(item.id)}
+          transitionName={item.id === leavingId ? 'none' : transitionName(item.id)}
+        />
+      ))}
+    </ul>
+  );
 
   return (
-    <div className="flex w-full items-start justify-center sm:px-2 lg:px-4">
-      <section
-        aria-labelledby="processing-title"
-        className="w-full max-w-2xl rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] px-3 py-4 shadow-sm sm:px-8 sm:py-7"
-      >
-        <h1
-          id="processing-title"
-          className={`text-center text-2xl font-semibold tracking-tight sm:text-4xl ${
-            failed ? 'text-red-800' : 'text-[#0A0A0A]'
-          }`}
-        >
-          {failed ? 'Processing failed' : 'Processing'}
-        </h1>
+    <div className="flex w-full items-start justify-center px-3 pt-8 pb-10 sm:px-4 sm:pt-14">
+      <div className="w-full max-w-lg">
+        <h1 className="text-center text-2xl font-bold sm:text-3xl lg:text-4xl">Legal Analysis</h1>
 
         {warning && (
           <div
@@ -337,159 +377,64 @@ export default function DocumentProcessing() {
           </div>
         )}
 
-        {selectedItem && (
-          <article
-            aria-label={`${selectedTitle.fileName} ID ${selectedTitle.shortId}`}
-            className={`mt-6 rounded-lg border px-4 py-4 sm:px-5 ${cardStyle}`}
-          >
-            <div className="mb-3 min-w-0">
-              <h2
-                title={`${selectedTitle.fileName} ID ${selectedItem.id}`}
-                className="truncate text-sm font-semibold text-gray-900"
-              >
-                {selectedTitle.fileName}
-              </h2>
-              <p className="text-xs text-gray-500">ID {selectedTitle.shortId}</p>
-            </div>
-
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs text-gray-500">Processing stage</p>
-                <p className={`mt-1 break-words text-base font-semibold ${stageColor}`}>
-                  {currentStage}
-                </p>
-              </div>
-
-              {analysis && !queued && !cancelled && (
-                <span className="shrink-0 text-sm font-semibold text-gray-900 tabular-nums">
-                  {percent}%
-                </span>
-              )}
-            </div>
-
-            {selectedItem.isError && (
-              <p className="mt-3 break-words text-sm text-amber-800">
-                Could not retrieve the latest status.
-                {analysis ? ' The last available status is shown.' : ''}
-              </p>
-            )}
-
-            {failed ? (
-              <div
-                role="alert"
-                className="mt-3 whitespace-pre-line break-words text-sm text-red-700 [overflow-wrap:anywhere]"
-              >
-                {analysis?.error_message || 'Unknown error occurred.'}
-              </div>
-            ) : cancelled ? (
-              <p className="mt-3 text-sm text-gray-600">This analysis was cancelled.</p>
-            ) : queued ? null : (
-              <>
-                {showDetectedType && (
-                  <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm sm:px-4">
-                    <span className="text-gray-500">Detected type: </span>
-                    <span className="font-semibold text-gray-900">
-                      {getDocumentTypeLabel(detectedType)}
-                    </span>
-                    {confidence != null && Number.isFinite(confidence) && (
-                      <span className="ml-1 text-gray-500">({Math.round(confidence * 100)}%)</span>
-                    )}
-                  </div>
-                )}
-
-                {!showDetectedType && !completed && analysis && (
-                  <p className="mt-3 text-sm text-gray-500">
-                    Document type has not been detected yet.
-                  </p>
-                )}
-
-                <Progress
-                  value={percent}
-                  aria-label={`${selectedTitle.fileName}: processing progress`}
-                  className={`mt-3 h-2.5 bg-gray-200 ${
-                    completed ? '[&>div]:bg-lime-600' : '[&>div]:bg-[#171717]'
-                  }`}
-                />
-              </>
-            )}
-
-            {cancellable && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isCancelling}
-                  onClick={() => handleCancel(selectedItem.id)}
-                  className="h-10 rounded-lg border-[#e7caca] bg-white px-4 text-sm text-[#a33636] hover:bg-[#fff3f3]"
-                >
-                  {isCancelling ? 'Cancelling...' : 'Cancel'}
-                </Button>
-              </div>
-            )}
-
-            {completed && (
-              <div className="mt-4 flex justify-end">
-                <Button
-                  type="button"
-                  onClick={() => navigate(`/analysis/${selectedItem.id}`)}
-                  className="h-10 rounded-lg bg-[#171717] px-4 text-sm text-white hover:bg-[#2A2A2A]"
-                >
-                  View results
-                </Button>
-              </div>
-            )}
-          </article>
-        )}
-
-        {showQueueList && (
-          <div
-            role="list"
-            aria-label="Analysis queue"
-            className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1"
-          >
-            {items.map((item, index) => {
-              const rowAnalysis = item.data;
-              const { fileName, shortId } = getTitle(rowAnalysis?.document_id, item.id);
-              const isSelected = item.id === activeId;
-              const rowStatus = getAnalysisStatusConfig(rowAnalysis?.status);
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="listitem"
-                  aria-current={isSelected}
-                  onClick={() => selectItem(item.id)}
-                  className={`flex w-full min-w-0 items-center gap-3 rounded-lg border bg-white px-3 py-2 text-left transition-colors ${
-                    isSelected
-                      ? 'border-[#171717] ring-1 ring-[#171717]'
-                      : 'border-[#E5E5E5] hover:border-gray-300'
-                  }`}
-                >
-                  <span className="w-6 shrink-0 text-sm font-semibold text-gray-500 tabular-nums">
-                    {index + 1}.
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <p
-                      title={`${fileName} ID ${item.id}`}
-                      className="truncate text-sm font-medium text-gray-900"
-                    >
-                      {fileName}
-                    </p>
-                    <p className="text-xs text-gray-500">ID {shortId}</p>
-                  </div>
-
-                  <span className={`shrink-0 text-xs font-semibold ${rowStatus.color}`}>
-                    {rowStatus.label}
-                  </span>
-                </button>
-              );
-            })}
+        {hero && (
+          <div className="mt-6 sm:mt-10">
+            <ProcessingHero
+              analysis={hero.data}
+              analysisId={hero.id}
+              fileName={getFileName(hero.data?.document_id)}
+              queuePosition={getQueuePosition(hero.id, hero.data)}
+              statusError={hero.isError}
+              openingResults={openingResults}
+              cancelling={cancelMutation.isPending && cancelMutation.variables === hero.id}
+              onCancel={
+                hero.data && isCancellableStatus(hero.data.status)
+                  ? () => handleCancel(hero.id)
+                  : null
+              }
+              onViewResults={() => navigate(`/analysis/${hero.id}`)}
+              onTryAgain={() => navigate('/document-analysis')}
+              transitionName={transitionName(hero.id)}
+            />
           </div>
         )}
 
-        <div className="mt-6 flex justify-center">
+        {upNext.length > 0 && (
+          <section
+            aria-labelledby="processing-up-next"
+            className="mt-10"
+            style={{ viewTransitionName: 'processing-up-next' }}
+          >
+            <h2
+              id="processing-up-next"
+              className="mb-2 flex items-center justify-between text-xs font-semibold tracking-wide text-gray-500 uppercase"
+            >
+              Up next
+              <span className="font-medium normal-case">
+                {upNext.filter((item) => isQueuedStatus(statusOf(item.id))).length} in queue
+              </span>
+            </h2>
+            {renderCards(upNext)}
+          </section>
+        )}
+
+        {finished.length > 0 && (
+          <section
+            aria-labelledby="processing-finished"
+            className="mt-8"
+            style={{ viewTransitionName: 'processing-finished' }}
+          >
+            <h2
+              id="processing-finished"
+              className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase"
+            >
+              Finished
+            </h2>
+            {renderCards(finished)}
+          </section>
+        )}
+
+        <div className="mt-10 flex justify-center">
           <Button
             type="button"
             variant="outline"
@@ -499,7 +444,7 @@ export default function DocumentProcessing() {
             Back to dashboard
           </Button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,9 @@ export interface UserResponse {
   updated_at: string;
   id: string;
   email: string;
-  full_name: string;
+  name: string;
+  surname: string | null;
+  company: string | null;
   role: UserRole;
   is_active: boolean;
   is_verified: boolean;
