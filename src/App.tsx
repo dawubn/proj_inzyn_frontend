@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 
 import Home from './pages/Home';
 import Register from './pages/Registration';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import DocumentAnalysis from './pages/DocumentAnalysis';
 import DocumentProcessing from './pages/DocumentProcessing';
@@ -43,6 +45,8 @@ function App() {
         {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Test route */}
         <Route path="/test" element={<h1>TEST</h1>} />

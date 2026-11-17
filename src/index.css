@@ -5,3 +5,155 @@
 
 @custom-variant dark (&:is(.dark *));
 
+
+/* Processing page */
+@keyframes processing-scan {
+  0%,
+  100% {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(46px);
+  }
+}
+
+@keyframes processing-stripes {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 28px 0;
+  }
+}
+
+@keyframes processing-halo {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes processing-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes processing-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@keyframes processing-line {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@utility animate-processing-scan {
+  animation: processing-scan 2.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@utility animate-processing-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(255 255 255 / 0.18) 0 7px,
+    transparent 7px 14px
+  );
+  background-size: 28px 100%;
+  animation: processing-stripes 0.9s linear infinite;
+}
+
+@utility animate-processing-halo {
+  animation: processing-halo 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@utility animate-processing-check {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: processing-check 0.5s 0.15s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@utility animate-processing-dot {
+  animation: processing-dot 1.4s ease-in-out infinite;
+}
+
+@utility animate-processing-line {
+  animation: processing-line 1.8s ease-in-out infinite;
+}
+
+/* The analysis moving to the top grows out of its queue card (view transitions) */
+::view-transition-group(*) {
+  animation-duration: 0.55s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-image-pair(*) {
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+::view-transition-old(*) {
+  animation-duration: 0.2s;
+}
+
+::view-transition-new(*) {
+  animation-duration: 0.35s;
+}
+
+/* Without a counterpart: the card leaving the top fades out in place, its queue card fades in */
+::view-transition-old(*):only-child {
+  animation: processing-leave 0.22s ease-in both;
+}
+
+::view-transition-new(*):only-child {
+  animation: processing-enter 0.35s 0.25s ease-out both;
+}
+
+@keyframes processing-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+@keyframes processing-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-processing-scan,
+  .animate-processing-stripes,
+  .animate-processing-halo,
+  .animate-processing-dot,
+  .animate-processing-line {
+    animation: none;
+  }
+
+  .animate-processing-check {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+}

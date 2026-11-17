@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMe } from '@/hooks/auth/useMe';
 import { useUpdateProfile } from '@/hooks/auth/useUpdateProfile';
+import { useChangeMyPasswordApiV1UsersMePasswordPost } from '@/api/generated/users/users';
 import type { UserResponse } from '@/api/generated/model';
 
 const MAX_FIELD_LENGTH = 255;
+const MIN_PASSWORD_LENGTH = 8;
 
 const inputClassName = 'h-10 border-gray-200 bg-white focus:border-gray-400 focus:ring-0';
 
@@ -172,6 +174,139 @@ function ProfileForm({ user }: { user: UserResponse }) {
   );
 }
 
+function PasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [repeatPassword, setRepeatPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+
+  const changePassword = useChangeMyPasswordApiV1UsersMePasswordPost({
+    fetch: {
+      credentials: 'include',
+    },
+  });
+
+  const isEmpty = !currentPassword && !newPassword && !repeatPassword;
+
+  function handleChange(setValue: (value: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(e.target.value);
+      setError('');
+      setIsSaved(false);
+    };
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setIsSaved(false);
+
+    if (!currentPassword) {
+      setError('Enter your current password');
+      return;
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters long`);
+      return;
+    }
+
+    if (newPassword !== repeatPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword === currentPassword) {
+      setError('New password must be different from the current one');
+      return;
+    }
+
+    try {
+      const response = await changePassword.mutateAsync({
+        data: { current_password: currentPassword, new_password: newPassword },
+      });
+
+      if (response.status === 204) {
+        setCurrentPassword('');
+        setNewPassword('');
+        setRepeatPassword('');
+        setIsSaved(true);
+      } else if (response.status === 400) {
+        setError('Current password is incorrect');
+      } else if (response.status === 422) {
+        setError('This password cannot be used. Choose a different one.');
+      } else {
+        setError('Could not change the password. Try again later.');
+      }
+    } catch {
+      setError('Could not change the password. Try again later.');
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-2">
+        <Label htmlFor="currentPassword">Current password</Label>
+        <Input
+          id="currentPassword"
+          type="password"
+          value={currentPassword}
+          autoComplete="current-password"
+          onChange={handleChange(setCurrentPassword)}
+          className={inputClassName}
+        />
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="newPassword">New password</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            autoComplete="new-password"
+            onChange={handleChange(setNewPassword)}
+            className={inputClassName}
+          />
+          <p className="text-xs text-gray-500">At least {MIN_PASSWORD_LENGTH} characters.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="repeatPassword">Repeat new password</Label>
+          <Input
+            id="repeatPassword"
+            type="password"
+            value={repeatPassword}
+            autoComplete="new-password"
+            onChange={handleChange(setRepeatPassword)}
+            className={inputClassName}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center">
+        <Button
+          type="submit"
+          disabled={isEmpty || changePassword.isPending}
+          className="h-10 w-full cursor-pointer rounded-lg bg-[#171717] px-4 text-sm font-medium text-white hover:bg-[#2A2A2A] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[140px]"
+        >
+          {changePassword.isPending ? 'Saving...' : 'Change password'}
+        </Button>
+
+        <div aria-live="polite" className="text-sm">
+          {error && <p className="text-red-500">{error}</p>}
+          {isSaved && !error && (
+            <p className="text-green-700">
+              Password changed. You have been logged out on other devices.
+            </p>
+          )}
+        </div>
+      </div>
+    </form>
+  );
+}
+
 export default function AccountDetails() {
   const { data: user, isLoading } = useMe();
 
@@ -188,7 +323,7 @@ export default function AccountDetails() {
           Account details
         </h1>
         <p className="mt-2 text-center text-sm text-gray-500">
-          Update your name, surname and company.
+          Update your profile data and password.
         </p>
 
         <div className="mt-5 rounded-lg border border-[#E5E5E5] bg-white p-4 sm:p-6">
@@ -198,6 +333,16 @@ export default function AccountDetails() {
           )}
           {user && <ProfileForm key={user.id} user={user} />}
         </div>
+
+        {user && (
+          <div className="mt-5 rounded-lg border border-[#E5E5E5] bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-[#0A0A0A]">Password</h2>
+            <p className="mt-1 mb-5 text-sm text-gray-500">
+              Change the password you use to log in.
+            </p>
+            <PasswordForm />
+          </div>
+        )}
       </section>
     </div>
   );
