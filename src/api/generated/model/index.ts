@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './aiModelOption';
+export * from './aiModelTestResult';
+export * from './analysisOptions';
+export * from './analysisOptionsResponse';
 export * from './analysisReportResponse';
 export * from './analysisReportResponseSummary';
 export * from './analysisStatus';
@@ -16,6 +20,7 @@ export * from './bodyTriggerLegalAnalysisApiV1RedactionsLegalAnalysisPost';
 export * from './bodyTriggerLocalOcrAsyncApiV1RedactionsLocalOcrPost';
 export * from './bodyUploadDocumentApiV1DocumentsPost';
 export * from './changePasswordRequest';
+export * from './costLevel';
 export * from './documentAnalysisListResponse';
 export * from './documentAnalysisListResponseIrregularitiesCount';
 export * from './documentAnalysisListResponseLegalAnalysisResult';
@@ -39,10 +44,13 @@ export * from './loginRequest';
 export * from './messageResponse';
 export * from './paginatedResponseDocumentResponse';
 export * from './processingStage';
+export * from './qualityLevel';
+export * from './redactionCategory';
 export * from './redactLocalOcrApiV1RedactionsPostParams';
 export * from './refreshRequest';
 export * from './reportStatus';
 export * from './resetPasswordRequest';
+export * from './speedLevel';
 export * from './triggerAnalysisResponse';
 export * from './triggerAzureOcrApiV1RedactionsAzureOcrPostParams';
 export * from './triggerFullOcrApiV1RedactionsFullOcrPostParams';

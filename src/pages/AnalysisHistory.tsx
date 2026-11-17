@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { getDocumentTypeLabel, fetchDocuments } from '@/api/documents-wrapper';
@@ -15,6 +15,10 @@ import {
 } from '@/lib/analysisStatus';
 import { fetchDashboardAnalyses, type DashboardAnalysis } from '@/api/documentApi/documentApi';
 import type { DocumentResponse } from '@/api/generated/model';
+import {
+  DeleteAnalysisDialog,
+  type AnalysisToDelete,
+} from '@/features/analysis/DeleteAnalysisDialog';
 
 const MIN_REFRESH_SPIN_MS = 500;
 
@@ -38,6 +42,7 @@ export default function AnalysisHistory() {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
+  const [analysisToDelete, setAnalysisToDelete] = useState<AnalysisToDelete | null>(null);
   const [isHardRefreshing, setIsHardRefreshing] = useState(false);
 
   const {
@@ -249,7 +254,7 @@ export default function AnalysisHistory() {
                     <p className="text-[11px] font-semibold text-[#6B7280]">Status</p>
                   </div>
 
-                  <div className="w-28 shrink-0 text-right" />
+                  <div className="w-32 shrink-0 text-right" />
                 </div>
 
                 <div className="divide-y divide-[#E5E7EB]">
@@ -307,8 +312,10 @@ export default function AnalysisHistory() {
                         <div
                           key={analysis.id}
                           className={`flex items-center px-3 py-2 sm:px-4 ${
-                            viewDisabled ? 'bg-gray-50' : 'hover:bg-gray-50'
+                            viewDisabled ? 'bg-gray-50' : 'cursor-pointer hover:bg-gray-50'
                           }`}
+                          // The whole row opens the analysis; the buttons keep keyboard access
+                          onClick={() => handleOpenAnalysis(analysis)}
                         >
                           <div className="min-w-0 flex-1 pr-3">
                             <p
@@ -353,7 +360,7 @@ export default function AnalysisHistory() {
                             {renderStatusBadge(analysis.status)}
                           </div>
 
-                          <div className="flex shrink-0 justify-end pl-2 sm:w-28 sm:pl-0">
+                          <div className="flex shrink-0 items-center justify-end gap-1 pl-2 sm:w-32 sm:pl-0">
                             <span
                               title={viewTitle}
                               className={viewDisabled ? 'cursor-not-allowed' : ''}
@@ -363,12 +370,32 @@ export default function AnalysisHistory() {
                                 size="sm"
                                 disabled={viewDisabled}
                                 className="h-9 min-h-[36px] rounded-lg bg-[#171717] px-3 text-xs font-medium text-white enabled:hover:bg-[#2A2A2A] disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-100 sm:px-4 sm:text-sm"
-                                onClick={() => handleOpenAnalysis(analysis)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenAnalysis(analysis);
+                                }}
                                 aria-label={`${viewTitle}: ${title}`}
                               >
                                 View
                               </Button>
                             </span>
+                            {isFinishedStatus(analysis.status) ? (
+                              <button
+                                type="button"
+                                aria-label={`Delete ${title}`}
+                                title="Delete analysis"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setAnalysisToDelete({ id: analysis.id, name: title });
+                                }}
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[#9CA3AF] transition hover:bg-red-50 hover:text-red-600 focus-visible:outline-2 focus-visible:outline-red-600"
+                              >
+                                <X size={18} />
+                              </button>
+                            ) : (
+                              // Keeps the View buttons aligned; running analyses cannot be deleted
+                              <span aria-hidden className="hidden h-9 w-9 shrink-0 sm:block" />
+                            )}
                           </div>
                         </div>
                       );
@@ -380,6 +407,7 @@ export default function AnalysisHistory() {
           </div>
         </div>
       </div>
+      <DeleteAnalysisDialog analysis={analysisToDelete} onClose={() => setAnalysisToDelete(null)} />
     </div>
   );
 }
