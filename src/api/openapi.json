@@ -2559,13 +2559,13 @@
                 "type": "string",
                 "enum": [
                     "unknown",
+                    "lawsuit",
+                    "power_of_attorney",
+                    "application",
                     "invoice",
                     "contract",
-                    "id_card",
-                    "passport",
-                    "bank_statement",
-                    "tax_form",
-                    "other"
+                    "patent",
+                    "demand_letter"
                 ],
                 "title": "DocumentType"
             },

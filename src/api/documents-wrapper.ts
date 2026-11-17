@@ -43,23 +43,14 @@ export const MAX_FILES_COUNT = 5;
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   auto: 'Auto-detect',
-  invoice: 'Invoice',
   contract: 'Contract',
-  id_card: 'ID Card',
-  passport: 'Passport',
-  bank_statement: 'Bank Statement',
-  tax_form: 'Tax Form',
-  financial_report: 'Financial Report',
-  government_tender: 'Government Tender',
-  law_and_regulation: 'Law & Regulation',
-  manual: 'Manual',
+  invoice: 'Invoice',
   patent: 'Patent',
-  scientific_article: 'Scientific Article',
   lawsuit: 'Lawsuit',
   power_of_attorney: 'Power of Attorney',
-  application: 'Application',
+  application: 'Job Application / CV',
+  demand_letter: 'Pre-trial Demand Letter',
   unknown: 'Unknown',
-  other: 'Other',
 };
 
 export function getDocumentTypeLabel(type: string | null | undefined): string {

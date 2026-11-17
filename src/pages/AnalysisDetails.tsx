@@ -151,7 +151,6 @@ export default function AnalysisDetails() {
     !!suggestedType &&
     documentType !== suggestedType &&
     suggestedType !== 'unknown' &&
-    suggestedType !== 'other' &&
     (confidence == null || confidence >= 0.45);
 
   /** Saves the type and analyzes the document again with the settings of this analysis. */
@@ -178,6 +177,12 @@ export default function AnalysisDetails() {
     if (!suggestedType) return;
     setBubbleError(null);
     setBubbleError(await rerunAsType(suggestedType));
+  };
+
+  const openTypeEditor = () => {
+    setChosenType(effectiveType && effectiveType !== 'unknown' ? effectiveType : '');
+    setTypeChangeError(null);
+    setTypeEditorOpen(true);
   };
 
   const handleChangeType = async () => {
@@ -390,6 +395,9 @@ export default function AnalysisDetails() {
     );
   }
 
+  const typeNotRecognized =
+    isFinishedStatus(analysis.status) && (!effectiveType || effectiveType === 'unknown');
+
   return (
     <div className="w-full max-w-full pb-16 sm:px-2 lg:px-4 lg:pb-0">
       <div className="mx-auto flex w-full max-w-400 flex-col rounded-lg border border-[#E5E5E5] bg-[#F5F5F5] p-3 shadow-sm sm:p-4 lg:p-6">
@@ -469,19 +477,28 @@ export default function AnalysisDetails() {
                   {isFinishedStatus(analysis.status) && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setChosenType(
-                          effectiveType && effectiveType !== 'unknown' ? effectiveType : '',
-                        );
-                        setTypeChangeError(null);
-                        setTypeEditorOpen(true);
-                      }}
+                      onClick={openTypeEditor}
                       className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 sm:min-h-0"
                     >
                       <Pencil size={12} aria-hidden />
                       Change type
                     </button>
                   )}
+                </div>
+              )}
+
+              {typeNotRecognized && !typeEditorOpen && (
+                <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
+                  <CloudAlert size={15} className="text-blue-500 shrink-0" />
+                  <span className="text-blue-700">
+                    The document type was not recognized. Which type is it?
+                  </span>
+                  <button
+                    onClick={openTypeEditor}
+                    className="ml-1 min-h-9 whitespace-nowrap rounded-lg px-2 py-0.5 text-xs font-semibold bg-blue-100 sm:min-h-0 text-blue-800 hover:bg-blue-200 transition-colors"
+                  >
+                    Choose type
+                  </button>
                 </div>
               )}
 
