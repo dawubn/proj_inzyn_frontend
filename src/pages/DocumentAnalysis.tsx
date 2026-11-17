@@ -32,9 +32,7 @@ type QueueItem = {
 
 const AUTO = 'auto';
 
-const PROFILE_OPTIONS = Object.entries(DOCUMENT_TYPE_LABELS).filter(
-  ([key]) => key !== 'unknown' && key !== 'other',
-);
+const PROFILE_OPTIONS = Object.entries(DOCUMENT_TYPE_LABELS).filter(([key]) => key !== 'unknown');
 
 function nameWithoutExtension(name: string): string {
   const dot = name.lastIndexOf('.');

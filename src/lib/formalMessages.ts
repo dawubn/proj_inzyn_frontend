@@ -41,7 +41,6 @@ const reasonMessages: Record<string, string> = {
     'Nie można pewnie przypisać treści do tego pola. Sprawdź je w dokumencie.',
   VARIANT_FIELD_REVIEW:
     'Sprawdź, czy ten element występuje i jest potrzebny w tym rodzaju dokumentu.',
-  VISUAL_REVIEW_REQUIRED: 'Sprawdź zdjęcie i zabezpieczenia na oryginale dokumentu.',
   TABLE_CONTENT_UNVERIFIED: 'Sprawdź, czy tabela zawiera wypełnione pozycje, a nie tylko nagłówki.',
   EMPTY_FIELD: 'To pole jest puste. Uzupełnij je w dokumencie.',
   INVALID_DATE: 'Ta data jest niepoprawna. Sprawdź dzień, miesiąc i rok.',

@@ -87,6 +87,7 @@ export function ProcessingHero({
   const detectedType = analysis?.detected_document_type;
   const confidence = analysis?.classification_confidence;
   const showDetectedType = !!detectedType && detectedType !== 'unknown';
+  const typeNotRecognized = kind === 'completed' && !showDetectedType;
   const showProgress = kind === 'running' || kind === 'completed' || kind === 'loading';
 
   return (
@@ -123,6 +124,13 @@ export function ProcessingHero({
           </p>
         </div>
 
+        {typeNotRecognized && (
+          <div className="mt-3 inline-flex animate-in rounded-lg bg-gray-50 px-4 py-2 text-sm fade-in duration-500">
+            <span className="text-gray-500">Detected type:&nbsp;</span>
+            <span className="font-semibold text-gray-900">Not recognized</span>
+            <span className="ml-1 text-gray-400">(choose it in the analysis details)</span>
+          </div>
+        )}
         {showDetectedType && kind !== 'failed' && (
           <div className="mt-3 inline-flex animate-in rounded-lg bg-gray-50 px-4 py-2 text-sm fade-in duration-500">
             <span className="text-gray-500">Detected type:&nbsp;</span>
