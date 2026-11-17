@@ -11,7 +11,9 @@ import { useRegister } from '@/hooks/auth/useRegister';
 import { useLogin } from '@/hooks/auth/useLogin';
 
 export default function Register() {
-  const [fullName, setFullName] = useState('');
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [company, setCompany] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
@@ -25,8 +27,13 @@ export default function Register() {
     e.preventDefault();
     setError('');
 
-    if (!fullName.trim()) {
-      setError('Account name is required');
+    if (!name.trim()) {
+      setError('Name is required');
+      return;
+    }
+
+    if (!surname.trim()) {
+      setError('Surname is required');
       return;
     }
 
@@ -39,8 +46,9 @@ export default function Register() {
       const regResponse = await registerMutation.mutateAsync({
         email,
         password,
-        full_name: fullName.trim(),
-        role: 'business_user',
+        name: name.trim(),
+        surname: surname.trim(),
+        company: company.trim() || null,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       }) as any;
 
@@ -84,11 +92,31 @@ export default function Register() {
           <CardContent className="px-6 pt-0 pb-6">
             <form onSubmit={handleRegister} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Account name</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-10 border-gray-200 focus:border-gray-400 focus:ring-0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="surname">Surname</Label>
+                <Input
+                  id="surname"
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  className="h-10 border-gray-200 focus:border-gray-400 focus:ring-0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company">Company (optional)</Label>
+                <Input
+                  id="company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
                   className="h-10 border-gray-200 focus:border-gray-400 focus:ring-0"
                 />
               </div>

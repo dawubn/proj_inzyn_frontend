@@ -51,7 +51,7 @@ function CheckResult({
         }
       : check.outcome === 'not_applicable'
         ? severityConfig.low
-        : check.outcome === 'fail' && check.severity === 'error'
+        : check.outcome === 'fail'
           ? severityConfig.error
           : severityConfig.warning;
   const label = displayLabel(check.rule_name, check.field_name);
@@ -79,7 +79,7 @@ function CheckResult({
           <span
             className={`${config.badge} px-2 py-1 rounded text-xs font-medium whitespace-nowrap`}
           >
-            {outcomeLabels[check.outcome] ?? 'Review'}
+            {outcomeLabels[check.outcome] ?? outcomeLabels.unknown}
           </span>
         </div>
         <p className="text-xs text-gray-600 mt-1">{displayMessage(check)}</p>
@@ -165,8 +165,8 @@ export function FormalValidationCard({
                 </p>
                 {!['unsupported', 'type_required'].includes(summary.validation_status ?? '') && (
                   <p className="mt-1 text-xs text-gray-500">
-                    Needs attention: {rows.filter(({ check }) => check.outcome === 'fail').length}
-                    {' · '}Review:{' '}
+                    Issues found: {rows.filter(({ check }) => check.outcome === 'fail').length}
+                    {' · '}Manual review:{' '}
                     {
                       rows.filter(({ check }) => ['unknown', 'error'].includes(check.outcome))
                         .length

@@ -20,6 +20,8 @@ import {
   Download,
   ListChecks,
   Loader2,
+  Pencil,
+  ChevronDown,
 } from 'lucide-react';
 import type {
   AnalysisReportResponse,
@@ -32,11 +34,13 @@ import {
   getDocumentTypeLabel,
   patchDocumentType,
   confirmDocumentType,
-  triggerLegalAnalysis,
+  startDocumentAnalysis,
+  DOCUMENT_TYPE_LABELS,
   fetchPagesManifest,
   getDocumentDownloadUrl,
   type PreviewVariant,
 } from '@/api/documents-wrapper';
+import { AnalysisConfigCard } from '@/components/analysis/AnalysisConfigCard';
 import { FormalValidationCard } from '@/components/analysis/FormalValidationCard';
 import { DocumentViewer } from '@/features/document-viewer/DocumentViewer';
 import { IssueDetails } from '@/features/document-viewer/IssueDetails';
@@ -48,7 +52,8 @@ import {
   type AnalysisToDelete,
 } from '@/features/analysis/DeleteAnalysisDialog';
 import { useDownloadReport } from '@/hooks/analysis/useDownloadReport';
-import { getAnalysisStatusConfig } from '@/lib/analysisStatus';
+import { getAnalysisStatusConfig, isFinishedStatus } from '@/lib/analysisStatus';
+import { analysisModelInfo, startOptionsFromAnalysis } from '@/lib/analysisOptions';
 import {
   useMediaQuery,
   DESKTOP_QUERY,
@@ -76,6 +81,10 @@ export default function AnalysisDetails() {
   const [showRerunConfirm, setShowRerunConfirm] = useState(false);
   const [isRerunning, setIsRerunning] = useState(false);
   const [bubbleError, setBubbleError] = useState<string | null>(null);
+  // Manual change of the document type, followed by a new analysis
+  const [typeEditorOpen, setTypeEditorOpen] = useState(false);
+  const [chosenType, setChosenType] = useState('');
+  const [typeChangeError, setTypeChangeError] = useState<string | null>(null);
   const [requestedVariant, setRequestedVariant] = useState<PreviewVariant>('redacted');
   const [isIssueSheetOpen, setIsIssueSheetOpen] = useState(false);
 
@@ -145,19 +154,36 @@ export default function AnalysisDetails() {
     suggestedType !== 'other' &&
     (confidence == null || confidence >= 0.45);
 
-  const handleRunWithDetectedType = async () => {
-    if (!analysis?.document_id || !suggestedType) return;
-    setBubbleError(null);
+  /** Saves the type and analyzes the document again with the settings of this analysis. */
+  const rerunAsType = async (type: string): Promise<string | null> => {
+    if (!analysis?.document_id) return 'Document is not available.';
     setIsRerunning(true);
     try {
-      const updated = await patchDocumentType(analysis.document_id, suggestedType);
+      const updated = await patchDocumentType(analysis.document_id, type);
       setDocInfo(updated);
-      const result = await triggerLegalAnalysis(analysis.document_id);
-      navigate(`/document-analysis?resume=${result.analysis_id}`);
-    } catch {
-      setBubbleError('Failed to start re-analysis. Please try again.');
+      const result = await startDocumentAnalysis(
+        analysis.document_id,
+        startOptionsFromAnalysis(analysis.options),
+      );
+      navigate(`/document-analysis?resume=${result.id}`);
+      return null;
+    } catch (error) {
       setIsRerunning(false);
+      const detail = error instanceof Error && error.message ? ` ${error.message}` : '';
+      return `Failed to start re-analysis.${detail}`;
     }
+  };
+
+  const handleRunWithDetectedType = async () => {
+    if (!suggestedType) return;
+    setBubbleError(null);
+    setBubbleError(await rerunAsType(suggestedType));
+  };
+
+  const handleChangeType = async () => {
+    if (!chosenType) return;
+    setTypeChangeError(null);
+    setTypeChangeError(await rerunAsType(chosenType));
   };
 
   const handleKeepMyType = async () => {
@@ -176,6 +202,12 @@ export default function AnalysisDetails() {
       ((analysis?.legal_analysis_result as { errors?: LegalIssue[] } | null | undefined)?.errors ??
         []) as LegalIssue[],
     [analysis?.legal_analysis_result],
+  );
+
+  const modelInfo = analysisModelInfo(analysis?.options, analysis?.legal_analysis_result);
+
+  const aiAnalysisSkipped = Boolean(
+    (analysis?.legal_analysis_result as { skipped?: boolean } | null | undefined)?.skipped,
   );
 
   const formalIssues = useMemo(
@@ -276,7 +308,11 @@ export default function AnalysisDetails() {
   const issueList =
     filteredItems.length === 0 ? (
       <p className="text-sm text-[#737373]">
-        {errors.length ? 'No issues match your search.' : 'No issues found.'}
+        {errors.length
+          ? 'No issues match your search.'
+          : aiAnalysisSkipped
+            ? 'AI analysis was turned off for this analysis.'
+            : 'No issues found.'}
       </p>
     ) : (
       <IssueList items={filteredItems} {...issueListProps} />
@@ -364,9 +400,92 @@ export default function AnalysisDetails() {
               <h1 className="text-2xl font-semibold leading-tight tracking-tight text-[#0A0A0A] sm:text-4xl">
                 Analysis details
               </h1>
-              <p className="text-sm text-[#6B7280] mt-1">{getDocumentTypeLabel(effectiveType)}</p>
+              {typeEditorOpen ? (
+                <div className="mt-2 w-full max-w-xl rounded-lg border border-gray-200 bg-white p-3">
+                  <label
+                    htmlFor="document-type-change"
+                    className="block text-xs font-medium text-gray-700"
+                  >
+                    Document type
+                  </label>
+                  <div className="mt-1.5 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div className="relative min-w-0 sm:flex-1">
+                      <select
+                        id="document-type-change"
+                        value={chosenType}
+                        onChange={(event) => setChosenType(event.target.value)}
+                        disabled={isRerunning}
+                        className="h-10 w-full cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-10 text-sm text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171717] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9"
+                      >
+                        <option value="" disabled>
+                          Choose a type
+                        </option>
+                        {Object.entries(DOCUMENT_TYPE_LABELS)
+                          .filter(([key]) => key !== 'auto' && key !== 'unknown')
+                          .map(([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        aria-hidden
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTypeEditorOpen(false)}
+                        disabled={isRerunning}
+                        className="h-10 flex-1 whitespace-nowrap rounded-lg border border-gray-300 bg-white px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 sm:h-9 sm:flex-none"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleChangeType()}
+                        disabled={!chosenType || chosenType === effectiveType || isRerunning}
+                        className="h-10 flex-1 whitespace-nowrap rounded-lg bg-[#171717] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#2A2A2A] disabled:cursor-not-allowed disabled:opacity-50 sm:h-9 sm:flex-none"
+                      >
+                        {isRerunning ? 'Starting...' : 'Save and analyze again'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-gray-500">
+                    Saving the new type will analyze this document again with the same settings as
+                    this analysis. The current results will stay in your analysis history.
+                  </p>
+                  {typeChangeError && (
+                    <p role="alert" className="mt-1 text-xs text-red-600">
+                      {typeChangeError}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-[#6B7280]">{getDocumentTypeLabel(effectiveType)}</p>
+                  {isFinishedStatus(analysis.status) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChosenType(
+                          effectiveType && effectiveType !== 'unknown' ? effectiveType : '',
+                        );
+                        setTypeChangeError(null);
+                        setTypeEditorOpen(true);
+                      }}
+                      className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-900 sm:min-h-0"
+                    >
+                      <Pencil size={12} aria-hidden />
+                      Change type
+                    </button>
+                  )}
+                </div>
+              )}
 
-              {showBubble && !showRerunConfirm && (
+              {showBubble && !typeEditorOpen && !showRerunConfirm && (
                 <div className="mt-2 inline-flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm">
                   <CloudAlert size={15} className="text-blue-500 shrink-0" />
                   <span className="text-blue-700">
@@ -390,7 +509,7 @@ export default function AnalysisDetails() {
                 </div>
               )}
 
-              {showBubble && showRerunConfirm && (
+              {showBubble && !typeEditorOpen && showRerunConfirm && (
                 <div className="mt-2 inline-flex flex-col gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
                     <CloudAlert size={15} className="text-blue-500 shrink-0" />
@@ -419,45 +538,27 @@ export default function AnalysisDetails() {
                 </div>
               )}
 
-              {analysis && (
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-                  <div className="text-gray-600">
-                    Created:{' '}
-                    <span className="font-medium text-gray-900">
-                      {new Date(analysis.created_at).toLocaleString('en-GB')}
-                    </span>
-                  </div>
-                  <div className="hidden items-center gap-2 sm:flex">
-                    <span className="text-gray-600">Document ID:</span>
-                    <button
-                      onClick={() => copyToClipboard(analysis.document_id)}
-                      className="text-gray-600 hover:text-gray-900 cursor-pointer flex items-center gap-1.5 transition-colors bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded"
-                      title="Click to copy"
-                    >
-                      <span className="font-mono text-xs text-gray-900">
-                        {analysis.document_id}
-                      </span>
-                      <Copy size={14} className="shrink-0" />
-                    </button>
-                  </div>
-                  <div className="hidden items-center gap-2 sm:flex">
-                    <span className="text-gray-600">Analysis ID:</span>
-                    <button
-                      onClick={() => copyToClipboard(analysis.id)}
-                      className="text-gray-600 hover:text-gray-900 cursor-pointer flex items-center gap-1.5 transition-colors bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded"
-                      title="Click to copy"
-                    >
-                      <span className="font-mono text-xs text-gray-900">{analysis.id}</span>
-                      <Copy size={14} className="shrink-0" />
-                    </button>
-                  </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getAnalysisStatusConfig(analysis.status).className}`}
+                >
+                  {getAnalysisStatusConfig(analysis.status).label}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs whitespace-nowrap text-gray-600"
+                  title="AI model used for the legal analysis"
+                >
+                  <Brain size={13} aria-hidden />
+                  Model:{' '}
                   <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${getAnalysisStatusConfig(analysis.status).className}`}
+                    className={
+                      modelInfo.name ? 'font-mono font-semibold text-gray-900' : 'text-gray-900'
+                    }
                   >
-                    {getAnalysisStatusConfig(analysis.status).label}
+                    {modelInfo.name ?? modelInfo.fallback}
                   </span>
-                </div>
-              )}
+                </span>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <Button
@@ -513,12 +614,47 @@ export default function AnalysisDetails() {
               )}
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#E5E5E5] pt-3 text-sm">
+            <div className="text-gray-600">
+              Created:{' '}
+              <span className="font-medium text-gray-900">
+                {new Date(analysis.created_at).toLocaleString('en-GB')}
+              </span>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="text-gray-600">Document ID:</span>
+              <button
+                onClick={() => copyToClipboard(analysis.document_id)}
+                className="text-gray-600 hover:text-gray-900 cursor-pointer flex items-center gap-1.5 transition-colors bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded"
+                title="Click to copy"
+              >
+                <span className="font-mono text-xs text-gray-900">{analysis.document_id}</span>
+                <Copy size={14} className="shrink-0" />
+              </button>
+            </div>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="text-gray-600">Analysis ID:</span>
+              <button
+                onClick={() => copyToClipboard(analysis.id)}
+                className="text-gray-600 hover:text-gray-900 cursor-pointer flex items-center gap-1.5 transition-colors bg-gray-50 hover:bg-gray-100 px-2 py-1 rounded"
+                title="Click to copy"
+              >
+                <span className="font-mono text-xs text-gray-900">{analysis.id}</span>
+                <Copy size={14} className="shrink-0" />
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
         <div className="mt-6 flex flex-col gap-6 lg:flex-row">
           {/* Left Panel - sticks while the document scrolls (desktop) */}
           <div className="order-2 flex shrink-0 flex-col gap-6 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-12rem)] lg:w-96 lg:self-start lg:overflow-y-auto">
+            <AnalysisConfigCard
+              options={analysis.options}
+              legalResult={analysis.legal_analysis_result}
+            />
+
             <FormalValidationCard
               report={formalReport}
               isLoading={isReportLoading}

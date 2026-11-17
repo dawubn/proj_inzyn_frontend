@@ -14,9 +14,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ForgotPasswordRequest,
   HTTPValidationError,
   LoginRequest,
+  MessageResponse,
   RefreshRequest,
+  ResetPasswordRequest,
   UserCreate,
   UserResponse,
 } from '../model';
@@ -476,4 +479,265 @@ export const useLogoutApiV1AuthLogoutPost = <TError = unknown, TContext = unknow
   TContext
 > => {
   return useMutation(getLogoutApiV1AuthLogoutPostMutationOptions(options), queryClient);
+};
+export type forgotPasswordApiV1AuthForgotPasswordPostResponse202 = {
+  data: MessageResponse;
+  status: 202;
+};
+
+export type forgotPasswordApiV1AuthForgotPasswordPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type forgotPasswordApiV1AuthForgotPasswordPostResponseSuccess =
+  forgotPasswordApiV1AuthForgotPasswordPostResponse202 & {
+    headers: Headers;
+  };
+export type forgotPasswordApiV1AuthForgotPasswordPostResponseError =
+  forgotPasswordApiV1AuthForgotPasswordPostResponse422 & {
+    headers: Headers;
+  };
+
+export type forgotPasswordApiV1AuthForgotPasswordPostResponse =
+  | forgotPasswordApiV1AuthForgotPasswordPostResponseSuccess
+  | forgotPasswordApiV1AuthForgotPasswordPostResponseError;
+
+export const getForgotPasswordApiV1AuthForgotPasswordPostUrl = () => {
+  return `http://localhost:8000/api/v1/auth/forgot-password`;
+};
+
+/**
+ * Send a password reset link to the given email.
+ *
+ * The response is the same whether or not an account with this email exists,
+ * so the endpoint cannot be used to check which emails are registered.
+ * @summary Forgot Password
+ */
+export const forgotPasswordApiV1AuthForgotPasswordPost = async (
+  forgotPasswordRequest: ForgotPasswordRequest,
+  options?: RequestInit,
+): Promise<forgotPasswordApiV1AuthForgotPasswordPostResponse> => {
+  const res = await fetch(getForgotPasswordApiV1AuthForgotPasswordPostUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(forgotPasswordRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: forgotPasswordApiV1AuthForgotPasswordPostResponse['data'] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as forgotPasswordApiV1AuthForgotPasswordPostResponse;
+};
+
+export const getForgotPasswordApiV1AuthForgotPasswordPostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>,
+    TError,
+    { data: ForgotPasswordRequest },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>,
+  TError,
+  { data: ForgotPasswordRequest },
+  TContext
+> => {
+  const mutationKey = ['forgotPasswordApiV1AuthForgotPasswordPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>,
+    { data: ForgotPasswordRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return forgotPasswordApiV1AuthForgotPasswordPost(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgotPasswordApiV1AuthForgotPasswordPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>
+>;
+export type ForgotPasswordApiV1AuthForgotPasswordPostMutationBody = ForgotPasswordRequest;
+export type ForgotPasswordApiV1AuthForgotPasswordPostMutationError = HTTPValidationError;
+
+/**
+ * @summary Forgot Password
+ */
+export const useForgotPasswordApiV1AuthForgotPasswordPost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>,
+      TError,
+      { data: ForgotPasswordRequest },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof forgotPasswordApiV1AuthForgotPasswordPost>>,
+  TError,
+  { data: ForgotPasswordRequest },
+  TContext
+> => {
+  return useMutation(
+    getForgotPasswordApiV1AuthForgotPasswordPostMutationOptions(options),
+    queryClient,
+  );
+};
+export type resetPasswordApiV1AuthResetPasswordPostResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type resetPasswordApiV1AuthResetPasswordPostResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type resetPasswordApiV1AuthResetPasswordPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type resetPasswordApiV1AuthResetPasswordPostResponseSuccess =
+  resetPasswordApiV1AuthResetPasswordPostResponse204 & {
+    headers: Headers;
+  };
+export type resetPasswordApiV1AuthResetPasswordPostResponseError = (
+  | resetPasswordApiV1AuthResetPasswordPostResponse400
+  | resetPasswordApiV1AuthResetPasswordPostResponse422
+) & {
+  headers: Headers;
+};
+
+export type resetPasswordApiV1AuthResetPasswordPostResponse =
+  | resetPasswordApiV1AuthResetPasswordPostResponseSuccess
+  | resetPasswordApiV1AuthResetPasswordPostResponseError;
+
+export const getResetPasswordApiV1AuthResetPasswordPostUrl = () => {
+  return `http://localhost:8000/api/v1/auth/reset-password`;
+};
+
+/**
+ * Set a new password using the token from the reset link.
+ *
+ * The link works once. All existing sessions of the user stop working,
+ * and the session cookies of this browser are cleared.
+ * @summary Reset Password
+ */
+export const resetPasswordApiV1AuthResetPasswordPost = async (
+  resetPasswordRequest: ResetPasswordRequest,
+  options?: RequestInit,
+): Promise<resetPasswordApiV1AuthResetPasswordPostResponse> => {
+  const res = await fetch(getResetPasswordApiV1AuthResetPasswordPostUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resetPasswordRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resetPasswordApiV1AuthResetPasswordPostResponse['data'] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as resetPasswordApiV1AuthResetPasswordPostResponse;
+};
+
+export const getResetPasswordApiV1AuthResetPasswordPostMutationOptions = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>,
+    TError,
+    { data: ResetPasswordRequest },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>,
+  TError,
+  { data: ResetPasswordRequest },
+  TContext
+> => {
+  const mutationKey = ['resetPasswordApiV1AuthResetPasswordPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>,
+    { data: ResetPasswordRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetPasswordApiV1AuthResetPasswordPost(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordApiV1AuthResetPasswordPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>
+>;
+export type ResetPasswordApiV1AuthResetPasswordPostMutationBody = ResetPasswordRequest;
+export type ResetPasswordApiV1AuthResetPasswordPostMutationError = void | HTTPValidationError;
+
+/**
+ * @summary Reset Password
+ */
+export const useResetPasswordApiV1AuthResetPasswordPost = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>,
+      TError,
+      { data: ResetPasswordRequest },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetPasswordApiV1AuthResetPasswordPost>>,
+  TError,
+  { data: ResetPasswordRequest },
+  TContext
+> => {
+  return useMutation(
+    getResetPasswordApiV1AuthResetPasswordPostMutationOptions(options),
+    queryClient,
+  );
 };

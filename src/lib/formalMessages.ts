@@ -4,8 +4,8 @@ export type FormalOutcome = 'pass' | 'fail' | 'unknown' | 'not_applicable' | 'er
 
 export const outcomeLabels: Record<FormalOutcome, string> = {
   pass: 'Passed',
-  fail: 'Needs attention',
-  unknown: 'Review',
+  fail: 'Issue found',
+  unknown: 'Manual review',
   not_applicable: 'Not required',
   error: 'Unavailable',
 };

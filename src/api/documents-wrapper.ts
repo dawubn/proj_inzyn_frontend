@@ -1,9 +1,11 @@
 import type {
+  AnalysisOptionsResponse,
   DocumentResponse,
   DocumentType,
   DocumentAnalysisResponse,
   PaginatedResponseDocumentResponse,
 } from '@/api/generated/model';
+import type { AnalysisStartOptions } from '@/lib/analysisOptions';
 import {
   uploadDocumentApiV1DocumentsPost,
   listUserDocumentsApiV1DocumentsGet,
@@ -165,19 +167,57 @@ export async function uploadDocument(
   };
 }
 
-export async function startDocumentAnalysis(documentId: string): Promise<AnalysisResponse> {
-  const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
-    undefined,
-    { document_id: documentId },
-    { credentials: 'include' },
-  );
+export async function fetchAnalysisOptions(): Promise<AnalysisOptionsResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/options`, {
+    credentials: 'include',
+  });
 
-  if (response.status !== 202) {
-    throw new Error('Document analysis failed');
+  if (!response.ok) {
+    throw new Error('Could not load analysis settings');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const analysis = response.data as any;
+  return (await response.json()) as AnalysisOptionsResponse;
+}
+
+/**
+ * Starts the analysis of an uploaded document. Without `options` the backend runs
+ * the full pipeline with its default settings.
+ */
+export async function startDocumentAnalysis(
+  documentId: string,
+  options?: AnalysisStartOptions,
+): Promise<AnalysisResponse> {
+  // Built by hand: the categories have to be sent as a repeated parameter
+  const params = new URLSearchParams({ document_id: documentId });
+  if (options) {
+    params.set('anonymize', String(options.anonymize));
+    options.redactionCategories.forEach((category) =>
+      params.append('redaction_categories', category),
+    );
+    params.set('ai_analysis', String(options.aiAnalysis));
+    if (options.aiModel) params.set('ai_model', options.aiModel);
+  }
+
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/legal-analysis?${params}`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (response.status !== 202) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: unknown }) => (typeof body.detail === 'string' ? body.detail : ''))
+      .catch(() => '');
+    throw new Error(detail || 'Document analysis failed');
+  }
+
+  const analysis = (await response.json()) as {
+    analysis_id?: string;
+    status?: string;
+    queue_position?: number | null;
+  };
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
