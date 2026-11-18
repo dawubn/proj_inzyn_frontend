@@ -10,9 +10,11 @@ export type AnalysisStatus = (typeof AnalysisStatus)[keyof typeof AnalysisStatus
 
 export const AnalysisStatus = {
   pending: 'pending',
+  queued: 'queued',
   in_progress: 'in_progress',
   completed: 'completed',
   failed: 'failed',
+  cancelled: 'cancelled',
   ocr_in_progress: 'ocr_in_progress',
   ocr_completed: 'ocr_completed',
   ocr_failed: 'ocr_failed',

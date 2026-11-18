@@ -15,14 +15,13 @@ export function useFileSelection() {
   const selectedFiles = fileEntries.map((e) => e.file);
 
   function handleFiles(files: File[]) {
-    const merged = [...selectedFiles, ...files];
-    const validationError = validateFiles(merged);
+    const validationError = validateFiles(files);
     setErrorMessage(validationError);
 
     if (validationError) return;
 
     const newEntries = files.map((file) => ({ id: crypto.randomUUID(), file }));
-    setFileEntries((current) => [...current, ...newEntries]);
+    setFileEntries(newEntries);
   }
 
   function handleRemoveFile(id: string) {
@@ -32,6 +31,7 @@ export function useFileSelection() {
 
   function handleInputChange(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
     if (files.length > 0) handleFiles(files);
   }
 

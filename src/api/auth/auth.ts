@@ -43,9 +43,12 @@ export function isUuidPlaceholder(value?: string | null): boolean {
 }
 
 export function getUserDisplayName(
-  user?: Pick<MeResponse, 'id' | 'full_name' | 'email'> | null,
+  user?: Pick<MeResponse, 'id' | 'name' | 'surname' | 'email'> | null,
 ): string {
-  const fullname = user?.full_name?.trim();
+  const fullname = [user?.name, user?.surname]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(' ');
 
   if (fullname && !isUuidPlaceholder(fullname)) {
     return fullname;

@@ -1,7 +1,7 @@
 // src/api/auth/auth.types.ts
 export const LOGIN_ROUTE = '/';
 
-export type UserRole = 'admin' | 'businessuser';
+export type UserRole = 'admin' | 'user';
 
 export interface LoginPayload {
   email: string;
@@ -11,14 +11,17 @@ export interface LoginPayload {
 export interface RegisterPayload {
   email: string;
   password: string;
-  fullname: string;
-  role: UserRole;
+  name: string;
+  surname: string;
+  company?: string | null;
 }
 
 export interface UserResponse {
   id: string;
   email: string;
-  full_name: string;
+  name: string;
+  surname: string | null;
+  company: string | null;
   role: UserRole;
   isactive: boolean;
   isverified: boolean;

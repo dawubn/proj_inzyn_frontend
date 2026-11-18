@@ -5,6 +5,7 @@
  * REST API for document completeness analysis using OCR
  * OpenAPI spec version: 0.1.0
  */
+import type { AnalysisOptions } from './analysisOptions';
 import type { AnalysisStatus } from './analysisStatus';
 import type { DocumentAnalysisResponseExtractedFields } from './documentAnalysisResponseExtractedFields';
 import type { DocumentAnalysisResponseIrregularitiesCount } from './documentAnalysisResponseIrregularitiesCount';
@@ -35,4 +36,5 @@ export interface DocumentAnalysisResponse {
   ocr_raw_result: DocumentAnalysisResponseOcrRawResult;
   extracted_fields: DocumentAnalysisResponseExtractedFields;
   readonly irregularities_count: DocumentAnalysisResponseIrregularitiesCount;
+  readonly options: AnalysisOptions;
 }

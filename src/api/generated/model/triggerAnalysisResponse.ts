@@ -5,9 +5,12 @@
  * REST API for document completeness analysis using OCR
  * OpenAPI spec version: 0.1.0
  */
+import type { AnalysisStatus } from './analysisStatus';
 
 export interface TriggerAnalysisResponse {
   analysis_id: string;
   task_id: string;
   message: string;
+  status?: AnalysisStatus;
+  queue_position?: number | null;
 }

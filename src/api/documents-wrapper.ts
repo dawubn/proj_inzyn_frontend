@@ -1,6 +1,21 @@
-import type { DocumentResponse, DocumentAnalysisResponse, PaginatedResponseDocumentResponse } from '@/api/generated/model';
-import { uploadDocumentApiV1DocumentsPost, listUserDocumentsApiV1DocumentsGet } from '@/api/generated/documents/documents';
-import { listRedactionsApiV1RedactionsGet, triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost, getRedactionApiV1RedactionsAnalysisIdGet, deleteRedactionApiV1RedactionsAnalysisIdDelete } from '@/api/generated/redactions/redactions';
+import type {
+  AnalysisOptionsResponse,
+  DocumentResponse,
+  DocumentType,
+  DocumentAnalysisResponse,
+  PaginatedResponseDocumentResponse,
+} from '@/api/generated/model';
+import type { AnalysisStartOptions } from '@/lib/analysisOptions';
+import {
+  uploadDocumentApiV1DocumentsPost,
+  listUserDocumentsApiV1DocumentsGet,
+} from '@/api/generated/documents/documents';
+import {
+  listRedactionsApiV1RedactionsGet,
+  triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost,
+  getRedactionApiV1RedactionsAnalysisIdGet,
+  deleteRedactionApiV1RedactionsAnalysisIdDelete,
+} from '@/api/generated/redactions/redactions';
 
 export interface UploadedDocumentResponse {
   id: string;
@@ -12,6 +27,7 @@ export interface UploadedDocumentResponse {
 export interface AnalysisResponse {
   id: string;
   status?: string;
+  queue_position?: number | null;
 }
 
 export interface DocumentsPage {
@@ -27,23 +43,14 @@ export const MAX_FILES_COUNT = 5;
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   auto: 'Auto-detect',
-  invoice: 'Invoice',
   contract: 'Contract',
-  id_card: 'ID Card',
-  passport: 'Passport',
-  bank_statement: 'Bank Statement',
-  tax_form: 'Tax Form',
-  financial_report: 'Financial Report',
-  government_tender: 'Government Tender',
-  law_and_regulation: 'Law & Regulation',
-  manual: 'Manual',
+  invoice: 'Invoice',
   patent: 'Patent',
-  scientific_article: 'Scientific Article',
   lawsuit: 'Lawsuit',
   power_of_attorney: 'Power of Attorney',
-  application: 'Application',
+  application: 'Job Application / CV',
+  demand_letter: 'Pre-trial Demand Letter',
   unknown: 'Unknown',
-  other: 'Other',
 };
 
 export function getDocumentTypeLabel(type: string | null | undefined): string {
@@ -99,11 +106,12 @@ export const DEFAULT_STATUS_CONFIG: StatusConfig = {
 export const STATUS_CONFIG_MAP = {
   processed: { label: 'Completed', color: 'text-[#65A30D]' },
   processing: { label: 'During analysis', color: 'text-[#0284C7]' },
-  queued: { label: 'Queued', color: 'text-[#D97706]' },
+  queued: { label: 'Waiting for analysis', color: 'text-[#D97706]' },
   uploaded: { label: 'Queued', color: 'text-[#D97706]' },
   pending: { label: 'Queued', color: 'text-[#D97706]' },
   failed: { label: 'Problem with execution', color: 'text-[#B91C1C]' },
   archived: { label: 'Archived', color: 'text-[#6B7280]' },
+  cancelled: { label: 'Cancelled', color: 'text-[#6B7280]' },
   completed: { label: 'Completed', color: 'text-[#65A30D]' },
   in_progress: { label: 'In progress', color: 'text-[#0284C7]' },
   ocr_in_progress: { label: 'OCR in progress', color: 'text-[#0284C7]' },
@@ -132,16 +140,15 @@ export function isDuringAnalysis(status: string | undefined): boolean {
   return status === 'processing';
 }
 
-export async function uploadDocument(file: File): Promise<UploadedDocumentResponse> {
+export async function uploadDocument(
+  file: File,
+  documentType = 'auto',
+): Promise<UploadedDocumentResponse> {
   const response = await uploadDocumentApiV1DocumentsPost(
-    { file },
-    { credentials: 'include' }
+    { file, document_type: (documentType === 'auto' ? 'unknown' : documentType) as DocumentType },
+    { credentials: 'include' },
   );
-
-  if (response.status !== 201) {
-    throw new Error('Document upload failed');
-  }
-
+  if (response.status !== 201) throw new Error('Document upload failed');
   const doc = response.data as DocumentResponse;
   return {
     id: doc.id,
@@ -151,23 +158,81 @@ export async function uploadDocument(file: File): Promise<UploadedDocumentRespon
   };
 }
 
-export async function startDocumentAnalysis(documentId: string): Promise<AnalysisResponse> {
-  const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
-    undefined,
-    { document_id: documentId },
-    { credentials: 'include' }
-  );
+export async function fetchAnalysisOptions(): Promise<AnalysisOptionsResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/options`, {
+    credentials: 'include',
+  });
 
-  if (response.status !== 202) {
-    throw new Error('Document analysis failed');
+  if (!response.ok) {
+    throw new Error('Could not load analysis settings');
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const analysis = response.data as any;
+  return (await response.json()) as AnalysisOptionsResponse;
+}
+
+/**
+ * Starts the analysis of an uploaded document. Without `options` the backend runs
+ * the full pipeline with its default settings.
+ */
+export async function startDocumentAnalysis(
+  documentId: string,
+  options?: AnalysisStartOptions,
+): Promise<AnalysisResponse> {
+  // Built by hand: the categories have to be sent as a repeated parameter
+  const params = new URLSearchParams({ document_id: documentId });
+  if (options) {
+    params.set('anonymize', String(options.anonymize));
+    options.redactionCategories.forEach((category) =>
+      params.append('redaction_categories', category),
+    );
+    params.set('ai_analysis', String(options.aiAnalysis));
+    if (options.aiModel) params.set('ai_model', options.aiModel);
+  }
+
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/redactions/legal-analysis?${params}`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+
+  if (response.status !== 202) {
+    const detail = await response
+      .json()
+      .then((body: { detail?: unknown }) => (typeof body.detail === 'string' ? body.detail : ''))
+      .catch(() => '');
+    throw new Error(detail || 'Document analysis failed');
+  }
+
+  const analysis = (await response.json()) as {
+    analysis_id?: string;
+    status?: string;
+    queue_position?: number | null;
+  };
   return {
     id: analysis.analysis_id || documentId,
     status: analysis.status,
+    queue_position: analysis.queue_position ?? null,
   };
+}
+
+export async function cancelAnalysis(analysisId: string): Promise<DocumentAnalysisResponse> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(
+    `${apiUrl}/api/v1/redactions/${encodeURIComponent(analysisId)}/cancel`,
+    {
+      method: 'POST',
+      credentials: 'include',
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 409 ? 'Analysis has already finished.' : 'Could not cancel the analysis.',
+    );
+  }
+
+  return response.json() as Promise<DocumentAnalysisResponse>;
 }
 
 export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
@@ -188,22 +253,24 @@ export async function fetchRecentDocuments(): Promise<DocumentResponse[]> {
     }
   });
 
-  return Array.from(documentMap.values()).slice(0, 10).map((analysis) => ({
-    id: analysis.document_id,
-    original_filename: `Document ${analysis.id}`,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    status: analysis.status as any,
-    created_at: analysis.created_at,
-    updated_at: analysis.updated_at,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    file_extension: 'pdf' as any,
-    file_size_bytes: 0,
-    mime_type: 'application/pdf',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    document_type: 'unknown' as any,
-    suggested_document_type: null,
-    description: null,
-  }));
+  return Array.from(documentMap.values())
+    .slice(0, 10)
+    .map((analysis) => ({
+      id: analysis.document_id,
+      original_filename: `Document ${analysis.id}`,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      status: analysis.status as any,
+      created_at: analysis.created_at,
+      updated_at: analysis.updated_at,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      file_extension: 'pdf' as any,
+      file_size_bytes: 0,
+      mime_type: 'application/pdf',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      document_type: 'unknown' as any,
+      suggested_document_type: null,
+      description: null,
+    }));
 }
 
 export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]> {
@@ -246,10 +313,13 @@ export async function fetchDocumentsFromLast7Days(): Promise<DocumentResponse[]>
   }));
 }
 
-export async function fetchDocuments(page: number = 1, pageSize: number = 20): Promise<PaginatedResponseDocumentResponse> {
+export async function fetchDocuments(
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<PaginatedResponseDocumentResponse> {
   const response = await listUserDocumentsApiV1DocumentsGet(
     { page, page_size: pageSize },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 200) {
@@ -263,7 +333,7 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   const response = await triggerLegalAnalysisApiV1RedactionsLegalAnalysisPost(
     undefined,
     { document_id: documentId },
-    { credentials: 'include' }
+    { credentials: 'include' },
   );
 
   if (response.status !== 202) {
@@ -277,7 +347,10 @@ export async function triggerLegalAnalysis(documentId: string): Promise<{ analys
   };
 }
 
-export async function patchDocumentType(documentId: string, documentType: string): Promise<DocumentResponse> {
+export async function patchDocumentType(
+  documentId: string,
+  documentType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -293,7 +366,10 @@ export async function patchDocumentType(documentId: string, documentType: string
   return response.json() as Promise<DocumentResponse>;
 }
 
-export async function confirmDocumentType(documentId: string, confirmedType: string): Promise<DocumentResponse> {
+export async function confirmDocumentType(
+  documentId: string,
+  confirmedType: string,
+): Promise<DocumentResponse> {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   const response = await fetch(`${apiUrl}/api/v1/documents/${documentId}`, {
     method: 'PATCH',
@@ -310,16 +386,34 @@ export async function confirmDocumentType(documentId: string, confirmedType: str
 }
 
 export async function getAnalysisStatus(analysisId: string): Promise<DocumentAnalysisResponse> {
-  const response = await getRedactionApiV1RedactionsAnalysisIdGet(
-    analysisId,
-    { credentials: 'include' }
-  );
+  const response = await getRedactionApiV1RedactionsAnalysisIdGet(analysisId, {
+    credentials: 'include',
+  });
 
   if (response.status !== 200) {
     throw new Error('Failed to fetch analysis status');
   }
 
   return response.data as DocumentAnalysisResponse;
+}
+
+// Fetches every page of the user's documents (used where only a name lookup is needed)
+export async function fetchAllDocuments(): Promise<DocumentResponse[]> {
+  let page = 1;
+  const all: DocumentResponse[] = [];
+
+  while (true) {
+    const response = await fetchDocuments(page, 100);
+    all.push(...response.items);
+
+    if (page >= response.pages) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return all;
 }
 
 export type PreviewVariant = 'original' | 'redacted';
@@ -361,6 +455,40 @@ export function getPageImageUrl(
 export function getDocumentDownloadUrl(documentId: string): string {
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
   return `${apiUrl}/api/v1/documents/${documentId}/download`;
+}
+
+export interface ReportFile {
+  blob: Blob;
+  filename: string;
+}
+
+function filenameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const encoded = header.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encoded) return decodeURIComponent(encoded[1]);
+  const plain = header.match(/filename="([^"]+)"/i);
+  return plain ? plain[1] : null;
+}
+
+export async function fetchReportPdf(analysisId: string): Promise<ReportFile> {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await fetch(`${apiUrl}/api/v1/reports/${analysisId}/pdf`, {
+    credentials: 'include',
+  });
+
+  if (response.status === 409) {
+    throw new Error('The report will be available once the analysis is completed.');
+  }
+  if (!response.ok) {
+    throw new Error('Failed to download the report. Please try again.');
+  }
+
+  return {
+    blob: await response.blob(),
+    filename:
+      filenameFromDisposition(response.headers.get('Content-Disposition')) ??
+      `report_${analysisId.slice(0, 8)}.pdf`,
+  };
 }
 
 export async function deleteAnalysis(analysisId: string): Promise<void> {
