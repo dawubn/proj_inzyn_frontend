@@ -36,7 +36,7 @@ const sections = [
         </li>
         <li>
           <strong className="font-medium text-gray-900">Emails:</strong> messages needed to run your
-          account, such as password reset links.
+          account, such as links to confirm your email address and to reset the password.
         </li>
         <li>
           <strong className="font-medium text-gray-900">Contact form:</strong> your email address,
@@ -128,7 +128,10 @@ const sections = [
           delete them, and at the latest until the account is deleted.
         </li>
         <li>Server logs: for a short time; older entries are overwritten regularly.</li>
-        <li>Password reset links stop working after 30 minutes and after the first use.</li>
+        <li>
+          Links to confirm the email address stop working after 24 hours, password reset links after
+          30 minutes; both work only once.
+        </li>
         <li>
           Messages from the contact form: as long as needed to answer them and handle the matter.
         </li>
