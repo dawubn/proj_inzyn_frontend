@@ -10,11 +10,16 @@ import { useLogin } from '@/hooks/auth/useLogin';
 import LegalLinks from '@/components/public/LegalLinks';
 import { useAuthContext } from '@/context/auth-context';
 import { logoutApiV1AuthLogoutPost } from '@/api/generated/auth/auth';
+import ResendVerificationLink from '@/components/auth/ResendVerificationLink';
+
+// Sent by the backend when the account has not confirmed its email yet
+const EMAIL_NOT_VERIFIED = 'email_not_verified';
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notVerifiedEmail, setNotVerifiedEmail] = useState<string | null>(null);
 
   const loginMutation = useLogin();
   const navigate = useNavigate();
@@ -51,11 +56,17 @@ export default function Home() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNotVerifiedEmail(null);
     try {
       const response = await loginMutation.mutateAsync({ data: { email, password } });
-      if ((response.status as number) === 200 || response.status === 204) {
+      if (response.status === 200) {
         authContext?.setIsAuthenticated(true);
         navigate('/dashboard');
+      } else if (
+        response.status === 403 &&
+        (response.data as { code?: string } | undefined)?.code === EMAIL_NOT_VERIFIED
+      ) {
+        setNotVerifiedEmail(email.trim());
       } else {
         setError('Invalid email or password');
       }
@@ -150,14 +161,28 @@ export default function Home() {
                 </Button>
 
                 {error && <p className="text-center text-sm text-red-500">{error}</p>}
-
-                <div className="pt-1 text-center text-sm text-gray-600">
-                  Don&apos;t have an account?{' '}
-                  <Link to="/register" className="cursor-pointer underline hover:text-black">
-                    Sign up
-                  </Link>
-                </div>
               </form>
+
+              {/* Outside the login form: the resend button is a form of its own */}
+              {notVerifiedEmail && (
+                <div className="mt-6 space-y-3">
+                  <div
+                    role="alert"
+                    className="space-y-1 text-center text-sm leading-5 text-gray-600"
+                  >
+                    <p className="font-medium text-gray-900">Confirm your email first</p>
+                    <p>Open the link we sent to {notVerifiedEmail} when you created the account.</p>
+                  </div>
+                  <ResendVerificationLink key={notVerifiedEmail} email={notVerifiedEmail} />
+                </div>
+              )}
+
+              <div className="mt-6 text-center text-sm text-gray-600">
+                Don&apos;t have an account?{' '}
+                <Link to="/register" className="cursor-pointer underline hover:text-black">
+                  Sign up
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

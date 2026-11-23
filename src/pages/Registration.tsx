@@ -9,6 +9,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useRegister } from '@/hooks/auth/useRegister';
 import { useLogin } from '@/hooks/auth/useLogin';
+import AuthCard from '@/components/auth/AuthCard';
+import ResendVerificationLink from '@/components/auth/ResendVerificationLink';
 
 // Opened in a new tab, so the filled-in form stays as it is
 const NEW_TAB = { target: '_blank', rel: 'noopener noreferrer' } as const;
@@ -21,6 +23,8 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
   const [error, setError] = useState('');
+  // Set when the account has to confirm its email before the first login
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   const registerMutation = useRegister();
   const loginMutation = useLogin();
@@ -46,14 +50,14 @@ export default function Register() {
     }
 
     try {
-      const regResponse = await registerMutation.mutateAsync({
+      const regResponse = (await registerMutation.mutateAsync({
         email,
         password,
         name: name.trim(),
         surname: surname.trim(),
         company: company.trim() || null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      })) as any;
 
       if (regResponse?.status === 409) {
         setError('An account with this email already exists.');
@@ -64,8 +68,13 @@ export default function Register() {
         return;
       }
 
+      if (regResponse?.data?.is_verified === false) {
+        setPendingEmail(email.trim());
+        return;
+      }
+
       const loginResponse = await loginMutation.mutateAsync({ data: { email, password } });
-      if ((loginResponse.status as number) === 200 || loginResponse.status === 204) {
+      if (loginResponse.status === 200) {
         navigate('/dashboard');
       } else {
         setError('Registration succeeded but login failed. Please log in manually.');
@@ -76,6 +85,31 @@ export default function Register() {
   };
 
   const isPending = registerMutation.isPending || loginMutation.isPending;
+
+  if (pendingEmail) {
+    return (
+      <AuthCard
+        title="Check your email"
+        description={`We have sent a confirmation link to ${pendingEmail}.`}
+      >
+        <div className="space-y-5">
+          <p className="text-sm leading-5 text-gray-500">
+            Open the link to activate your account, then log in. The link is valid for 24 hours. If
+            the message does not arrive, check the spam folder or send a new link.
+          </p>
+
+          <ResendVerificationLink email={pendingEmail} />
+
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-700">
+            <ArrowRight size={16} />
+            <Link to="/" className="cursor-pointer hover:text-black">
+              Login
+            </Link>
+          </div>
+        </div>
+      </AuthCard>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
