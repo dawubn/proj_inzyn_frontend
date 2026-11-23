@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForgotPasswordApiV1AuthForgotPasswordPost } from '@/api/generated/auth/auth';
+import { EMAIL_LINKS_PER_DAY } from '@/lib/emailLinks';
 
 function BackToLogin() {
   return (
@@ -61,7 +62,8 @@ export default function ForgotPassword() {
         <div className="space-y-5">
           <p className="text-sm leading-5 text-gray-500">
             The link is valid for 30 minutes and can be used once. If the message does not arrive,
-            check the spam folder or try again in a minute.
+            check the spam folder or try again in a minute. You can ask for a link up to{' '}
+            {EMAIL_LINKS_PER_DAY} times a day.
           </p>
 
           <BackToLogin />
