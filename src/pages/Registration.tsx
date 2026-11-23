@@ -10,6 +10,9 @@ import { useState } from 'react';
 import { useRegister } from '@/hooks/auth/useRegister';
 import { useLogin } from '@/hooks/auth/useLogin';
 
+// Opened in a new tab, so the filled-in form stays as it is
+const NEW_TAB = { target: '_blank', rel: 'noopener noreferrer' } as const;
+
 export default function Register() {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
@@ -166,13 +169,13 @@ export default function Register() {
 
               <p className="px-3 text-center text-xs leading-5 text-gray-500">
                 By clicking continue, you agree to our{' '}
-                <a href="#" className="underline hover:text-black">
+                <Link to="/terms" {...NEW_TAB} className="underline hover:text-black">
                   Terms of Service
-                </a>{' '}
+                </Link>{' '}
                 and{' '}
-                <a href="#" className="underline hover:text-black">
+                <Link to="/privacy" {...NEW_TAB} className="underline hover:text-black">
                   Privacy Policy
-                </a>
+                </Link>
                 .
               </p>
 

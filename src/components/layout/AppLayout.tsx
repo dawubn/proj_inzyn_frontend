@@ -18,6 +18,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
+import LegalLinks from '@/components/public/LegalLinks';
 
 type MenuButtonProps = {
   label: string;
@@ -171,7 +172,9 @@ export default function AppLayout() {
               </div>
             </nav>
 
-            <div className="absolute bottom-6 left-6 right-6">
+            <div className="absolute bottom-6 left-6 right-6 space-y-4">
+              <LegalLinks onNavigate={() => setIsSidebarOpen(false)} />
+
               <Button
                 onClick={handleLogoutClick}
                 disabled={logoutMutation.isPending}

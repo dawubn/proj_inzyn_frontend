@@ -12,6 +12,10 @@ import AnalysisDetails from './pages/AnalysisDetails';
 import OcrResults from './pages/OcrResultsDetailed';
 import AnalysisHistory from '@/pages/AnalysisHistory';
 import AccountDetails from '@/pages/AccountDetails';
+import Contact from '@/pages/Contact';
+import TermsOfService from '@/pages/legal/TermsOfService';
+import PrivacyPolicy from '@/pages/legal/PrivacyPolicy';
+import NotFound from '@/pages/NotFound';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
@@ -48,6 +52,11 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Open to everyone, also when logged in */}
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+
         {/* Test route */}
         <Route path="/test" element={<h1>TEST</h1>} />
 
@@ -75,6 +84,8 @@ function App() {
 
           <Route path="/analysis/:analysisId/ocr" element={<OcrResults />} />
         </Route>
+
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

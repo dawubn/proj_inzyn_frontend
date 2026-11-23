@@ -1900,6 +1900,47 @@
                     }
                 }
             }
+        },
+        "/api/v1/contact": {
+            "post": {
+                "tags": [
+                    "contact"
+                ],
+                "summary": "Send Message",
+                "description": "Send a message to the team.\n\nThe message is emailed to an address kept only in the server configuration, with\n`Reply-To` set to the sender. No confirmation is sent to the given address, so the form\ncannot be used to send emails to other people.",
+                "operationId": "send_message_api_v1_contact_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContactRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "A field is missing, too long or not allowed"
+                    },
+                    "429": {
+                        "description": "Too many requests from this IP address; see Retry-After"
+                    },
+                    "503": {
+                        "description": "The contact form is not configured (`code` is \"contact_unavailable\")"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -3490,6 +3531,46 @@
                     "best"
                 ],
                 "title": "QualityLevel"
+            },
+            "ContactRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "format": "email",
+                        "title": "Email"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 100,
+                        "title": "Name",
+                        "default": ""
+                    },
+                    "subject": {
+                        "type": "string",
+                        "maxLength": 150,
+                        "title": "Subject",
+                        "default": ""
+                    },
+                    "message": {
+                        "type": "string",
+                        "maxLength": 5000,
+                        "title": "Message"
+                    },
+                    "website": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "title": "Website",
+                        "default": ""
+                    }
+                },
+                "additionalProperties": false,
+                "type": "object",
+                "required": [
+                    "email",
+                    "message"
+                ],
+                "title": "ContactRequest"
             }
         },
         "securitySchemes": {
