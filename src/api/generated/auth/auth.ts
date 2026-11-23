@@ -19,9 +19,12 @@ import type {
   LoginRequest,
   MessageResponse,
   RefreshRequest,
+  ResendVerificationRequest,
   ResetPasswordRequest,
+  TokenResponse,
   UserCreate,
   UserResponse,
+  VerifyEmailRequest,
 } from '../model';
 
 export type registerApiV1AuthRegisterPostResponse201 = {
@@ -52,6 +55,10 @@ export const getRegisterApiV1AuthRegisterPostUrl = () => {
 };
 
 /**
+ * Create an account.
+ *
+ * When email verification is required (`is_verified` is false in the response),
+ * a confirmation link is sent to the email and the account can log in after opening it.
  * @summary Register
  */
 export const registerApiV1AuthRegisterPost = async (
@@ -139,9 +146,9 @@ export const useRegisterApiV1AuthRegisterPost = <TError = HTTPValidationError, T
 > => {
   return useMutation(getRegisterApiV1AuthRegisterPostMutationOptions(options), queryClient);
 };
-export type loginApiV1AuthLoginPostResponse204 = {
-  data: void;
-  status: 204;
+export type loginApiV1AuthLoginPostResponse200 = {
+  data: TokenResponse;
+  status: 200;
 };
 
 export type loginApiV1AuthLoginPostResponse401 = {
@@ -149,16 +156,22 @@ export type loginApiV1AuthLoginPostResponse401 = {
   status: 401;
 };
 
+export type loginApiV1AuthLoginPostResponse403 = {
+  data: void;
+  status: 403;
+};
+
 export type loginApiV1AuthLoginPostResponse422 = {
   data: HTTPValidationError;
   status: 422;
 };
 
-export type loginApiV1AuthLoginPostResponseSuccess = loginApiV1AuthLoginPostResponse204 & {
+export type loginApiV1AuthLoginPostResponseSuccess = loginApiV1AuthLoginPostResponse200 & {
   headers: Headers;
 };
 export type loginApiV1AuthLoginPostResponseError = (
   | loginApiV1AuthLoginPostResponse401
+  | loginApiV1AuthLoginPostResponse403
   | loginApiV1AuthLoginPostResponse422
 ) & {
   headers: Headers;
@@ -173,13 +186,10 @@ export const getLoginApiV1AuthLoginPostUrl = () => {
 };
 
 /**
- * Login and set secure cookies for tokens.
+ * Login — returns tokens in JSON body and sets secure HTTP-only cookies.
  *
- * Tokens are set in secure HTTP-only cookies:
- * - access_token: expires in 15 minutes, SameSite=Lax
- * - refresh_token: expires in 7 days, SameSite=Strict
- *
- * Use GET /api/v1/users/me to fetch user info after login.
+ * Use the returned `access_token` as `Authorization: Bearer <token>` in Swagger UI,
+ * or rely on the cookies that are automatically set for browser clients.
  * @summary Login
  */
 export const loginApiV1AuthLoginPost = async (
@@ -195,7 +205,7 @@ export const loginApiV1AuthLoginPost = async (
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: loginApiV1AuthLoginPostResponse['data'] = body ? JSON.parse(body) : undefined;
+  const data: loginApiV1AuthLoginPostResponse['data'] = body ? JSON.parse(body) : {};
   return { data, status: res.status, headers: res.headers } as loginApiV1AuthLoginPostResponse;
 };
 
@@ -738,6 +748,262 @@ export const useResetPasswordApiV1AuthResetPasswordPost = <
 > => {
   return useMutation(
     getResetPasswordApiV1AuthResetPasswordPostMutationOptions(options),
+    queryClient,
+  );
+};
+export type verifyEmailApiV1AuthVerifyEmailPostResponse204 = {
+  data: void;
+  status: 204;
+};
+
+export type verifyEmailApiV1AuthVerifyEmailPostResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type verifyEmailApiV1AuthVerifyEmailPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type verifyEmailApiV1AuthVerifyEmailPostResponseSuccess =
+  verifyEmailApiV1AuthVerifyEmailPostResponse204 & {
+    headers: Headers;
+  };
+export type verifyEmailApiV1AuthVerifyEmailPostResponseError = (
+  | verifyEmailApiV1AuthVerifyEmailPostResponse400
+  | verifyEmailApiV1AuthVerifyEmailPostResponse422
+) & {
+  headers: Headers;
+};
+
+export type verifyEmailApiV1AuthVerifyEmailPostResponse =
+  | verifyEmailApiV1AuthVerifyEmailPostResponseSuccess
+  | verifyEmailApiV1AuthVerifyEmailPostResponseError;
+
+export const getVerifyEmailApiV1AuthVerifyEmailPostUrl = () => {
+  return `http://localhost:8000/api/v1/auth/verify-email`;
+};
+
+/**
+ * Confirm the email of an account with the token from the verification link.
+ * @summary Verify Email
+ */
+export const verifyEmailApiV1AuthVerifyEmailPost = async (
+  verifyEmailRequest: VerifyEmailRequest,
+  options?: RequestInit,
+): Promise<verifyEmailApiV1AuthVerifyEmailPostResponse> => {
+  const res = await fetch(getVerifyEmailApiV1AuthVerifyEmailPostUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(verifyEmailRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: verifyEmailApiV1AuthVerifyEmailPostResponse['data'] = body
+    ? JSON.parse(body)
+    : undefined;
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as verifyEmailApiV1AuthVerifyEmailPostResponse;
+};
+
+export const getVerifyEmailApiV1AuthVerifyEmailPostMutationOptions = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>,
+    TError,
+    { data: VerifyEmailRequest },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>,
+  TError,
+  { data: VerifyEmailRequest },
+  TContext
+> => {
+  const mutationKey = ['verifyEmailApiV1AuthVerifyEmailPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>,
+    { data: VerifyEmailRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return verifyEmailApiV1AuthVerifyEmailPost(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VerifyEmailApiV1AuthVerifyEmailPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>
+>;
+export type VerifyEmailApiV1AuthVerifyEmailPostMutationBody = VerifyEmailRequest;
+export type VerifyEmailApiV1AuthVerifyEmailPostMutationError = void | HTTPValidationError;
+
+/**
+ * @summary Verify Email
+ */
+export const useVerifyEmailApiV1AuthVerifyEmailPost = <
+  TError = void | HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>,
+      TError,
+      { data: VerifyEmailRequest },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof verifyEmailApiV1AuthVerifyEmailPost>>,
+  TError,
+  { data: VerifyEmailRequest },
+  TContext
+> => {
+  return useMutation(getVerifyEmailApiV1AuthVerifyEmailPostMutationOptions(options), queryClient);
+};
+export type resendVerificationApiV1AuthResendVerificationPostResponse202 = {
+  data: MessageResponse;
+  status: 202;
+};
+
+export type resendVerificationApiV1AuthResendVerificationPostResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type resendVerificationApiV1AuthResendVerificationPostResponseSuccess =
+  resendVerificationApiV1AuthResendVerificationPostResponse202 & {
+    headers: Headers;
+  };
+export type resendVerificationApiV1AuthResendVerificationPostResponseError =
+  resendVerificationApiV1AuthResendVerificationPostResponse422 & {
+    headers: Headers;
+  };
+
+export type resendVerificationApiV1AuthResendVerificationPostResponse =
+  | resendVerificationApiV1AuthResendVerificationPostResponseSuccess
+  | resendVerificationApiV1AuthResendVerificationPostResponseError;
+
+export const getResendVerificationApiV1AuthResendVerificationPostUrl = () => {
+  return `http://localhost:8000/api/v1/auth/resend-verification`;
+};
+
+/**
+ * Send a new verification link to an account that has not confirmed its email.
+ *
+ * The response is the same for every email, so it cannot be used to check
+ * which emails are registered or verified.
+ * @summary Resend Verification
+ */
+export const resendVerificationApiV1AuthResendVerificationPost = async (
+  resendVerificationRequest: ResendVerificationRequest,
+  options?: RequestInit,
+): Promise<resendVerificationApiV1AuthResendVerificationPostResponse> => {
+  const res = await fetch(getResendVerificationApiV1AuthResendVerificationPostUrl(), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(resendVerificationRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resendVerificationApiV1AuthResendVerificationPostResponse['data'] = body
+    ? JSON.parse(body)
+    : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as resendVerificationApiV1AuthResendVerificationPostResponse;
+};
+
+export const getResendVerificationApiV1AuthResendVerificationPostMutationOptions = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>,
+    TError,
+    { data: ResendVerificationRequest },
+    TContext
+  >;
+  fetch?: RequestInit;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>,
+  TError,
+  { data: ResendVerificationRequest },
+  TContext
+> => {
+  const mutationKey = ['resendVerificationApiV1AuthResendVerificationPost'];
+  const { mutation: mutationOptions, fetch: fetchOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, fetch: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>,
+    { data: ResendVerificationRequest }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resendVerificationApiV1AuthResendVerificationPost(data, fetchOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendVerificationApiV1AuthResendVerificationPostMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>
+>;
+export type ResendVerificationApiV1AuthResendVerificationPostMutationBody =
+  ResendVerificationRequest;
+export type ResendVerificationApiV1AuthResendVerificationPostMutationError = HTTPValidationError;
+
+/**
+ * @summary Resend Verification
+ */
+export const useResendVerificationApiV1AuthResendVerificationPost = <
+  TError = HTTPValidationError,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>,
+      TError,
+      { data: ResendVerificationRequest },
+      TContext
+    >;
+    fetch?: RequestInit;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resendVerificationApiV1AuthResendVerificationPost>>,
+  TError,
+  { data: ResendVerificationRequest },
+  TContext
+> => {
+  return useMutation(
+    getResendVerificationApiV1AuthResendVerificationPostMutationOptions(options),
     queryClient,
   );
 };

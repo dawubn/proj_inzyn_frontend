@@ -12,6 +12,7 @@
                     "auth"
                 ],
                 "summary": "Register",
+                "description": "Create an account.\n\nWhen email verification is required (`is_verified` is false in the response),\na confirmation link is sent to the email and the account can log in after opening it.",
                 "operationId": "register_api_v1_auth_register_post",
                 "requestBody": {
                     "content": {
@@ -53,7 +54,7 @@
                     "auth"
                 ],
                 "summary": "Login",
-                "description": "Login and set secure cookies for tokens.\n\nTokens are set in secure HTTP-only cookies:\n- access_token: expires in 15 minutes, SameSite=Lax\n- refresh_token: expires in 7 days, SameSite=Strict\n\nUse GET /api/v1/users/me to fetch user info after login.",
+                "description": "Login — returns tokens in JSON body and sets secure HTTP-only cookies.\n\nUse the returned `access_token` as `Authorization: Bearer <token>` in Swagger UI,\nor rely on the cookies that are automatically set for browser clients.",
                 "operationId": "login_api_v1_auth_login_post",
                 "requestBody": {
                     "content": {
@@ -66,11 +67,21 @@
                     "required": true
                 },
                 "responses": {
-                    "204": {
-                        "description": "User logged in. Tokens set in secure HTTP-only cookies (access_token with SameSite=Lax, refresh_token with SameSite=Strict)."
+                    "200": {
+                        "description": "User logged in. Tokens returned in body AND set as HTTP-only cookies.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenResponse"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Invalid credentials"
+                    },
+                    "403": {
+                        "description": "Email address not confirmed yet (`code` is \"email_not_verified\"); a new link can be requested"
                     },
                     "422": {
                         "description": "Validation Error",
@@ -1768,6 +1779,86 @@
                     },
                     "400": {
                         "description": "Reset link is invalid, already used or expired"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/verify-email": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify Email",
+                "description": "Confirm the email of an account with the token from the verification link.",
+                "operationId": "verify_email_api_v1_auth_verify_email_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VerifyEmailRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Successful Response"
+                    },
+                    "400": {
+                        "description": "Verification link is invalid, already used or expired"
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/resend-verification": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Resend Verification",
+                "description": "Send a new verification link to an account that has not confirmed its email.\n\nThe response is the same for every email, so it cannot be used to check\nwhich emails are registered or verified.",
+                "operationId": "resend_verification_api_v1_auth_resend_verification_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResendVerificationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Validation Error",
@@ -3490,6 +3581,58 @@
                     "best"
                 ],
                 "title": "QualityLevel"
+            },
+            "ResendVerificationRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "title": "Email"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "email"
+                ],
+                "title": "ResendVerificationRequest"
+            },
+            "TokenResponse": {
+                "properties": {
+                    "access_token": {
+                        "type": "string",
+                        "title": "Access Token"
+                    },
+                    "refresh_token": {
+                        "type": "string",
+                        "title": "Refresh Token"
+                    },
+                    "token_type": {
+                        "type": "string",
+                        "title": "Token Type",
+                        "default": "bearer"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "access_token",
+                    "refresh_token"
+                ],
+                "title": "TokenResponse"
+            },
+            "VerifyEmailRequest": {
+                "properties": {
+                    "token": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "minLength": 1,
+                        "title": "Token"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "token"
+                ],
+                "title": "VerifyEmailRequest"
             }
         },
         "securitySchemes": {
