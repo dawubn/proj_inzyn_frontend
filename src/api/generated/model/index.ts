@@ -20,6 +20,7 @@ export * from './bodyTriggerLegalAnalysisApiV1RedactionsLegalAnalysisPost';
 export * from './bodyTriggerLocalOcrAsyncApiV1RedactionsLocalOcrPost';
 export * from './bodyUploadDocumentApiV1DocumentsPost';
 export * from './changePasswordRequest';
+export * from './contactRequest';
 export * from './costLevel';
 export * from './documentAnalysisListResponse';
 export * from './documentAnalysisListResponseIrregularitiesCount';

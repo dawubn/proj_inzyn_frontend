@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useLogin } from '@/hooks/auth/useLogin';
+import LegalLinks from '@/components/public/LegalLinks';
 import { useAuthContext } from '@/context/auth-context';
 import { logoutApiV1AuthLogoutPost } from '@/api/generated/auth/auth';
 import ResendVerificationLink from '@/components/auth/ResendVerificationLink';
@@ -98,15 +99,15 @@ export default function Home() {
               <span className="text-xl font-semibold">CerberDoc</span>
             </div>
 
-            <a href="#" className="text-sm underline">
+            <Link to="/contact" className="text-sm underline">
               Contact us
-            </a>
+            </Link>
           </div>
 
           <div className="hidden justify-end px-6 py-6 md:flex">
-            <a href="#" className="text-sm underline">
+            <Link to="/contact" className="text-sm underline">
               Contact us
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -186,7 +187,9 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="p-6" />
+        <div className="p-6">
+          <LegalLinks className="justify-center" />
+        </div>
       </div>
     </div>
   );
